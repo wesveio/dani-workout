@@ -31,7 +31,7 @@ export default function WeekView() {
           </div>
           <CardDescription>{weekInfo.emphasis}</CardDescription>
           {isDeloadWeek(week) && (
-            <div className="flex items-center gap-2 rounded-xl border border-neutral/20 bg-white px-3 py-2 text-sm text-neutral shadow-inner shadow-neutral/10">
+            <div className="flex items-center gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-3 py-2 text-sm text-foreground/90 shadow-inner shadow-neutral/20">
               <Clock4 className="h-4 w-4" />
               {treinoDani.deload.guidance}
             </div>
@@ -62,16 +62,16 @@ export default function WeekView() {
                 <Link
                   key={day.day}
                   to={`/session/${session.id}/${week}`}
-                  className="group rounded-2xl border border-neutral/20 bg-card px-4 py-4 shadow-soft transition hover:-translate-y-1 hover:border-foreground"
+                  className="group rounded-2xl border border-neutral/40 bg-surface px-4 py-4 shadow-soft transition hover:-translate-y-1 hover:border-accent text-foreground"
                 >
                   <div className="flex items-center justify-between">
                     <Badge variant="muted">{day.day}</Badge>
-                    <Dumbbell className="h-4 w-4 text-neutral group-hover:text-foreground" />
+                    <Dumbbell className="h-4 w-4 text-muted group-hover:text-foreground" />
                   </div>
                   <div className="mt-2 text-lg font-semibold">
                     Sessão {session.id}
                   </div>
-                  <div className="text-sm text-neutral">{session.subtitle}</div>
+                  <div className="text-sm text-foreground/80">{session.subtitle}</div>
                 </Link>
               )
             })}
@@ -88,7 +88,7 @@ export default function WeekView() {
           {treinoDani.phases.map((phase) => (
             <div
               key={phase.label + phase.weeks.join('-')}
-              className="flex items-start gap-3 rounded-xl border border-neutral/20 bg-white px-3 py-3 shadow-soft"
+              className="flex items-start gap-3 rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft"
             >
               <Calendar className="mt-1 h-4 w-4 text-foreground" />
               <div>
@@ -96,7 +96,7 @@ export default function WeekView() {
                   <span className="text-sm font-semibold">{phase.label}</span>
                   <Badge variant="outline">Semanas {phase.weeks.join(', ')}</Badge>
                 </div>
-                <div className="text-sm text-neutral">{phase.description}</div>
+                <div className="text-sm text-foreground/80">{phase.description}</div>
               </div>
             </div>
           ))}

@@ -53,9 +53,9 @@ export default function Settings() {
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-xs uppercase tracking-[0.2em] text-neutral">Configurações</div>
+        <div className="text-xs uppercase tracking-[0.2em] text-muted">Configurações</div>
         <h1 className="text-2xl font-bold">Dados & recuperação</h1>
-        <p className="text-sm text-neutral">Foco no offline. Importação/exportação em JSON.</p>
+        <p className="text-sm text-foreground/80">Foco no offline. Importação/exportação em JSON.</p>
       </div>
 
       <Card>
@@ -63,10 +63,10 @@ export default function Settings() {
           <CardTitle>Opções de volume</CardTitle>
           <CardDescription>Ligue o +1 série opcional quando estiver recuperada.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-between rounded-xl border border-neutral/20 bg-card px-4 py-3">
+        <CardContent className="flex items-center justify-between rounded-xl border border-neutral/50 bg-surface px-4 py-3">
           <div>
             <div className="text-sm font-semibold">Recuperação está excelente</div>
-            <div className="text-xs text-neutral">
+            <div className="text-xs text-foreground/70">
               Adiciona +1 série de Hip Thrust (A) e Mesa Flexora (C) nas semanas 5–7 e 9–12.
             </div>
           </div>
@@ -169,8 +169,8 @@ export default function Settings() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-2 rounded-xl border border-neutral/20 bg-card px-4 py-3 text-sm text-neutral">
-        <ShieldCheck className="h-5 w-5 text-foreground" />
+      <div className="flex items-center gap-2 rounded-xl border border-neutral/50 bg-surface px-4 py-3 text-sm text-foreground/80">
+        <ShieldCheck className="h-5 w-5 text-accent" />
         Dados ficam localmente no IndexedDB via Dexie. Sem necessidade de rede.
       </div>
     </div>

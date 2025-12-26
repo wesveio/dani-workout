@@ -15,9 +15,9 @@ export default function Progress() {
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-xs uppercase tracking-[0.2em] text-neutral">Progresso</div>
+        <div className="text-xs uppercase tracking-[0.2em] text-muted">Progresso</div>
         <h1 className="text-2xl font-bold">Histórico por exercício</h1>
-        <p className="text-sm text-neutral">Abra qualquer exercício para ver tendências e PRs.</p>
+        <p className="text-sm text-foreground/80">Abra qualquer exercício para ver tendências e PRs.</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -28,11 +28,11 @@ export default function Progress() {
           const lastDate = lastLog ? dayjs(lastLog.date).format('MMM D') : '—'
           return (
             <Link key={exercise.id} to={`/exercise/${exercise.id}`}>
-              <Card className="transition hover:-translate-y-1 hover:border-foreground">
+              <Card className="transition hover:-translate-y-1 hover:border-accent">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                    <CardDescription>{focusLabels[exercise.focus]}</CardDescription>
+                    <CardDescription className="text-foreground/80">{focusLabels[exercise.focus]}</CardDescription>
                   </div>
                   <Badge variant="muted">{exercise.rest} de descanso</Badge>
                 </CardHeader>
@@ -40,13 +40,13 @@ export default function Progress() {
                   <div>
                     <div className="text-sm font-semibold">Melhor carga</div>
                     <div className="text-lg font-bold">{bestWeight || '--'} kg</div>
-                    <div className="text-xs text-neutral">Último: {lastDate}</div>
+                    <div className="text-xs text-foreground/70">Último: {lastDate}</div>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground text-background shadow-soft">
                     <BarChart3 className="h-5 w-5" />
                   </div>
                 </CardContent>
-                <div className="flex items-center justify-between border-t border-neutral/10 px-4 py-2 text-xs text-neutral">
+                <div className="flex items-center justify-between border-t border-neutral/40 px-4 py-2 text-xs text-foreground/70">
                   {logs.length} registro(s)
                   <ChevronRight className="h-4 w-4" />
                 </div>

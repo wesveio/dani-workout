@@ -4,13 +4,13 @@ import dayjs from 'dayjs'
 import { AlertCircle, Check, PlayCircle, Plus, Timer } from 'lucide-react'
 import { treinoDani } from '@/data/treinoDani'
 import { computeTargetsForWeek, focusLabels, formatTargetText, getSessionTemplate, getWeekInfo } from '@/lib/program'
+import { cn } from '@/lib/utils'
 import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date'
 import { useWorkoutStore } from '@/store/workoutStore'
 import type { SetEntry, SessionType } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -143,9 +143,9 @@ export default function SessionDetail() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-sm uppercase tracking-[0.2em] text-neutral">Sessão {session.id}</div>
-          <h1 className="text-2xl font-bold">{session.subtitle}</h1>
-          <div className="text-sm text-neutral">
+          <div className="text-sm uppercase tracking-[0.2em] text-muted">Sessão {session.id}</div>
+          <h1 className="text-2xl font-bold text-foreground">{session.subtitle}</h1>
+          <div className="text-sm text-foreground/80">
             Semana {activeWeek} · {weekInfo.phase}
           </div>
         </div>
@@ -153,20 +153,20 @@ export default function SessionDetail() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Aqueça primeiro</CardTitle>
-            <CardDescription>{treinoDani.warmup.duration}</CardDescription>
-          </div>
-          <Badge variant="outline">Essencial</Badge>
-        </CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Aqueça primeiro</CardTitle>
+                <CardDescription className="text-foreground/80">{treinoDani.warmup.duration}</CardDescription>
+              </div>
+              <Badge variant="outline">Essencial</Badge>
+            </CardHeader>
         <CardContent>
           <Collapsible>
-            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-neutral/30 bg-white px-4 py-3 text-left text-sm font-semibold shadow-soft">
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-neutral/60 bg-neutral/60 px-4 py-3 text-left text-sm font-semibold shadow-soft">
               <span>Ver passos do aquecimento</span>
               <Plus className="h-4 w-4" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-2 rounded-xl border border-neutral/20 bg-card px-4 py-3 text-sm text-neutral">
+            <CollapsibleContent className="mt-3 space-y-2 rounded-xl border border-neutral/40 bg-surface px-4 py-3 text-sm text-foreground/90">
               {treinoDani.warmup.items.map((item) => (
                 <div key={item} className="flex items-start gap-2">
                   <div className="mt-1 h-2 w-2 rounded-full bg-foreground" />
@@ -176,7 +176,7 @@ export default function SessionDetail() {
             </CollapsibleContent>
           </Collapsible>
           {isDeloadWeek(activeWeek) && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-neutral/30 bg-white px-4 py-3 text-sm text-neutral shadow-inner shadow-neutral/10">
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20">
               <AlertCircle className="mt-0.5 h-4 w-4 text-foreground" />
               <span>
                 Dica de deload: {treinoDani.deload.guidance} ({treinoDani.deload.reductionNote})
@@ -193,7 +193,9 @@ export default function SessionDetail() {
           if (!state) return null
           let cursor = 0
           return (
-            <Card key={exercise.id}>
+            <div key={exercise.id} className="relative pl-3">
+              <span className="absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60" aria-hidden />
+              <Card>
               <CardHeader className="gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <CardTitle>{exercise.name}</CardTitle>
@@ -207,7 +209,7 @@ export default function SessionDetail() {
                 <CardDescription className="flex flex-wrap gap-3 text-xs">
                   <span>{exercise.rest} de descanso</span>
                   <span>{exercise.rir}</span>
-                  {exercise.notes && <span>{exercise.notes}</span>}
+                  {exercise.notes && <span className="text-foreground/80">{exercise.notes}</span>}
                   {exercise.videoUrl && (
                     <Button
                       asChild
@@ -243,12 +245,12 @@ export default function SessionDetail() {
                     const startIndex = cursor
                     cursor += target.targetSets
                     return (
-                      <div key={targetIdx} className="rounded-xl border border-neutral/20 bg-white px-3 py-3 shadow-inner shadow-neutral/10">
-                        <div className="mb-2 flex items-center justify-between text-sm font-semibold">
+                      <div key={targetIdx} className="rounded-xl border border-neutral/50 bg-neutral/60 px-3 py-3 shadow-inner shadow-neutral/20">
+                        <div className="mb-2 flex items-center justify-between text-sm font-semibold text-foreground">
                           <div>
                             {target.label ?? 'Séries de trabalho'} · {target.repRange[0]}–{target.repRange[1]} repetições
                           </div>
-                          <div className="text-xs text-neutral">
+                          <div className="text-xs text-foreground/70">
                             Séries {startIndex + 1}–{startIndex + target.targetSets}
                           </div>
                         </div>
@@ -302,14 +304,22 @@ export default function SessionDetail() {
                                   />
                                 </div>
                                 <div className="col-span-2 sm:col-span-2 flex items-center gap-2">
-                                  <Checkbox
+                                  <Button
+                                    type="button"
+                                    variant="default"
+                                    size="sm"
+                                    className={cn(
+                                      'h-9 px-3 text-xs font-semibold',
+                                      set.completed ? '' : 'opacity-80 hover:opacity-100',
+                                    )}
                                     aria-label={`${exercise.name} série ${absoluteIndex + 1} concluída`}
-                                    checked={Boolean(set.completed)}
-                                    onCheckedChange={(checked) =>
-                                      handleSetChange(exercise.id, absoluteIndex, 'completed', Boolean(checked))
+                                    aria-pressed={Boolean(set.completed)}
+                                    onClick={() =>
+                                      handleSetChange(exercise.id, absoluteIndex, 'completed', !set.completed)
                                     }
-                                  />
-                                  <span className="text-xs text-neutral">Feito</span>
+                                  >
+                                    {set.completed ? 'Feito' : 'Marcar feito'}
+                                  </Button>
                                 </div>
                               </div>
                             )
@@ -326,7 +336,7 @@ export default function SessionDetail() {
                 </Button>
 
                 <div className="space-y-1">
-                  <Label>Notas</Label>
+                  <Label className="text-foreground">Notas</Label>
                   <Textarea
                     aria-label={`${exercise.name} notas`}
                     placeholder="Dicas de técnica, tempo, o que lembrar."
@@ -335,7 +345,8 @@ export default function SessionDetail() {
                   />
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </div>
           )
         })}
       </div>

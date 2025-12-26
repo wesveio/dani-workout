@@ -22,17 +22,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const weekInfo = treinoDani.weeks.find((w) => w.number === weekNumber)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background/90 to-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-neutral/20 bg-background/90 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-neutral/30 bg-background/80 backdrop-blur" aria-label="Cabeçalho principal">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft">
+            <div className="h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40">
               D
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-neutral">Dani POC</div>
-              <div className="text-lg font-semibold leading-tight">Guia de treino de 12 semanas</div>
-              <div className="text-xs text-neutral">Divisão Seg/Qua/Sex</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-foreground/70">Daniela Sotilo</div>
+              <div className="text-lg font-semibold leading-tight text-foreground">Guia de treino de 12 semanas</div>
+              <div className="text-xs text-foreground/70">Divisão Seg/Qua/Sex</div>
             </div>
           </div>
           <div className="hidden items-center gap-2 md:flex">
@@ -47,9 +47,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 pb-28">{children}</main>
-      <nav className="fixed bottom-4 left-0 right-0 mx-auto flex max-w-md justify-center px-4 md:hidden">
-        <div className="flex w-full justify-between rounded-full bg-card shadow-soft border border-neutral/30 px-2 py-2">
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 pb-28" role="main">{children}</main>
+      <nav className="fixed bottom-4 left-0 right-0 mx-auto flex max-w-md justify-center px-4 md:hidden" aria-label="Navegação inferior">
+        <div className="flex w-full justify-between rounded-full bg-surface shadow-soft border border-neutral/50 px-2 py-2">
           {navItems.map((item) => {
             const active = location.pathname === item.to || location.pathname.startsWith(item.to + '/')
             const Icon = item.icon
@@ -59,7 +59,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 to={item.to}
                 className={cn(
                   'flex flex-1 flex-col items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition',
-                  active ? 'bg-foreground text-background' : 'text-neutral hover:text-foreground',
+                  active ? 'bg-accent text-background shadow-soft' : 'text-muted hover:text-foreground',
                 )}
               >
                 <Icon className="h-5 w-5" />

@@ -24,7 +24,7 @@ function App() {
         <Card className="w-[320px]">
           <CardContent className="p-6 text-center">
             <div className="text-sm font-semibold">Carregando seus dados…</div>
-            <div className="mt-2 text-xs text-neutral">Cache offline (IndexedDB)</div>
+            <div className="mt-2 text-xs text-foreground/70">Cache offline (IndexedDB)</div>
           </CardContent>
         </Card>
       </div>

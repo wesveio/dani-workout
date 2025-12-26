@@ -51,7 +51,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn('text-sm text-neutral leading-relaxed', className)}
+    className={cn('text-sm text-foreground/80 leading-relaxed', className)}
     {...props}
   />
 ))
@@ -78,7 +78,7 @@ const ToastClose = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Close
     ref={ref}
-    className={cn('absolute right-3 top-3 text-neutral hover:text-foreground', className)}
+    className={cn('absolute right-3 top-3 text-foreground/70 hover:text-foreground', className)}
     toast-close=""
     {...props}
   >

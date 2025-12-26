@@ -28,7 +28,7 @@ export default function ExerciseHistory() {
   if (!exercise) {
     return (
       <div className="space-y-3">
-        <p className="text-neutral">Exercício não encontrado.</p>
+        <p className="text-foreground/80">Exercício não encontrado.</p>
         <Button variant="secondary" onClick={() => navigate(-1)}>
           Voltar
         </Button>
@@ -57,9 +57,9 @@ export default function ExerciseHistory() {
           Voltar
         </Button>
         <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-neutral">Exercício</div>
+          <div className="text-xs uppercase tracking-[0.2em] text-foreground/70">Exercício</div>
           <h1 className="text-2xl font-bold">{exercise.name}</h1>
-          <div className="text-sm text-neutral">{focusLabels[exercise.focus]} · {exercise.rest} de descanso</div>
+          <div className="text-sm text-foreground/80">{focusLabels[exercise.focus]} · {exercise.rest} de descanso</div>
         </div>
       </div>
 
@@ -89,7 +89,7 @@ export default function ExerciseHistory() {
         </CardHeader>
         <CardContent className="h-64">
           {chartData.length === 0 ? (
-            <div className="grid h-full place-items-center text-neutral text-sm">Ainda sem registros.</div>
+            <div className="grid h-full place-items-center text-foreground/80 text-sm">Ainda sem registros.</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -137,11 +137,11 @@ export default function ExerciseHistory() {
           <CardDescription>Últimas {logs.length} sessões</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {logs.length === 0 && <div className="text-sm text-neutral">Nenhuma entrada ainda.</div>}
+          {logs.length === 0 && <div className="text-sm text-foreground/80">Nenhuma entrada ainda.</div>}
           {logs.map((log) => (
             <div
               key={log.id}
-              className="rounded-xl border border-neutral/20 bg-white px-3 py-3 shadow-soft"
+              className="rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft"
             >
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">
@@ -149,7 +149,7 @@ export default function ExerciseHistory() {
                 </div>
                 <Badge variant="muted">Vol {Math.round(computeVolume(log))}</Badge>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral md:grid-cols-4">
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-foreground/80 md:grid-cols-4">
                 {log.sets.map((set, idx) => (
                   <div key={idx} className="rounded-lg border border-neutral/10 bg-card px-2 py-2">
                     Série {idx + 1}: {set.weight} kg x {set.reps} @ RIR {set.rir}{' '}
@@ -157,7 +157,7 @@ export default function ExerciseHistory() {
                   </div>
                 ))}
               </div>
-              {log.notes && <div className="mt-2 text-sm text-neutral">Notas: {log.notes}</div>}
+              {log.notes && <div className="mt-2 text-sm text-foreground/80">Notas: {log.notes}</div>}
             </div>
           ))}
         </CardContent>

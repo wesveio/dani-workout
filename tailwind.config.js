@@ -4,12 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#DDDCDB',
-        foreground: '#080807',
-        muted: '#90908F',
-        accent: '#18D02E',
-        neutral: '#454132',
-        card: '#F2F1EF',
+        background: '#161616',
+        foreground: '#F7F7F5',
+        surface: '#1F1F1F',
+        muted: '#A6A6A6',
+        accent: '#4EFF74',
+        accentSecondary: '#4495FF',
+        neutral: '#2C2C2C',
+        card: '#1F1F1F',
       },
       fontFamily: {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -18,7 +20,7 @@ export default {
         xl: '24px',
       },
       boxShadow: {
-        soft: '0 10px 30px rgba(0,0,0,0.08)',
+        soft: '0 15px 40px rgba(0,0,0,0.3)',
       },
     },
   },
