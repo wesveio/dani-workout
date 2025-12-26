@@ -1,0 +1,12 @@
+{
+  "name": "Diário de Treinos da Dani",
+  "short_name": "Dani Treinos",
+  "description": "Acompanhamento do plano de 12 semanas da Dani",
+  "theme_color": "#DDDCDB",
+  "background_color": "#DDDCDB",
+  "display": "standalone",
+  "icons": [
+    {"src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
