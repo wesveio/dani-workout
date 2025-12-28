@@ -84,7 +84,7 @@ const lowerA: SessionTemplate = {
   exercises: [
     {
       id: 'hack-squat',
-      name: 'Hack Squat (ou Agachamento Livre)',
+      name: 'Agachamento hack (ou agachamento livre)',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2',
@@ -97,7 +97,7 @@ const lowerA: SessionTemplate = {
     },
     {
       id: 'hip-thrust',
-      name: 'Hip Thrust (barra) — pausa 1s no topo',
+      name: 'Elevação de quadril com barra (hip thrust) — pausa 1s no topo',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2 (travar suave no topo)',
@@ -171,6 +171,37 @@ const lowerA: SessionTemplate = {
       ],
       notes: '1s de pausa no topo; alongar embaixo',
     },
+    {
+      id: 'core-rkc-plank',
+      name: 'Prancha RKC',
+      focus: 'isolation',
+      rest: '60–75s',
+      rir: 'Manter tensão',
+      prescriptions: [
+        { weekRange: [1, 12], targets: [{ sets: 3, repRange: [20, 35], label: 'Segundos' }] },
+      ],
+      notes: 'Tensão máxima sem cair a lombar.',
+    },
+    {
+      id: 'core-dead-bug',
+      name: 'Dead Bug (controlado)',
+      focus: 'isolation',
+      rest: '60s',
+      rir: 'Controle total',
+      prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 3, repRange: [8, 12] }] }],
+      notes: 'Por lado; coluna neutra e respiração.',
+    },
+    {
+      id: 'core-pallof',
+      name: 'Prensa anti-rotação no cabo (pallof press)',
+      focus: 'isolation',
+      rest: '60–75s',
+      rir: 'Estável, sem girar',
+      prescriptions: [
+        { weekRange: [1, 12], targets: [{ sets: 3, setRange: [2, 3], repRange: [10, 14] }] },
+      ],
+      notes: 'Anti-rotação; brace ativo.',
+    },
   ],
 }
 
@@ -181,7 +212,7 @@ const upperB: SessionTemplate = {
   exercises: [
     {
       id: 'pulldown',
-      name: 'Pulldown (barra ou triangulo)',
+      name: 'Puxada alta (pulldown) — barra ou triângulo',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2',
@@ -251,7 +282,7 @@ const upperB: SessionTemplate = {
     },
     {
       id: 'cable-kickback',
-      name: 'Kickback no cabo',
+      name: 'Elevação de glúteo no cabo (kickback)',
       focus: 'pump',
       rest: '60s',
       rir: 'Última série RIR 0–1',
@@ -274,6 +305,33 @@ const upperB: SessionTemplate = {
           targets: [{ sets: 2, setRange: [2, 3], repRange: [20, 30] }],
         },
       ],
+    },
+    {
+      id: 'core-cable-crunch',
+      name: 'Abdominal na polia (cable crunch)',
+      focus: 'isolation',
+      rest: '60s',
+      rir: 'Controle, sem puxar com braço',
+      prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 4, repRange: [10, 15] }] }],
+    },
+    {
+      id: 'core-side-plank',
+      name: 'Prancha lateral',
+      focus: 'isolation',
+      rest: '60–75s',
+      rir: 'Manter alinhamento',
+      prescriptions: [
+        { weekRange: [1, 12], targets: [{ sets: 3, repRange: [20, 40], label: 'Segundos por lado' }] },
+      ],
+    },
+    {
+      id: 'core-farmers-carry',
+      name: 'Caminhada do fazendeiro com halter',
+      focus: 'compound',
+      rest: '60–90s',
+      rir: 'Postura neutra',
+      prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 4, repRange: [20, 40], label: 'Metros' }] }],
+      notes: 'Tronco reto; sem inclinar.',
     },
   ],
 }
@@ -359,6 +417,35 @@ const lowerC: SessionTemplate = {
         { weekRange: [1, 12], targets: [{ sets: 4, repRange: [12, 20] }] },
       ],
     },
+    {
+      id: 'core-hanging-knee-raise',
+      name: 'Elevação de joelhos na barra (ou cadeira do capitão)',
+      focus: 'isolation',
+      rest: '60–75s',
+      rir: 'Controle sem balançar',
+      prescriptions: [
+        { weekRange: [1, 12], targets: [{ sets: 4, setRange: [3, 4], repRange: [8, 12] }] },
+      ],
+    },
+    {
+      id: 'core-reverse-crunch',
+      name: 'Crunch reverso no banco',
+      focus: 'isolation',
+      rest: '60s',
+      rir: 'Controlado, sem impulso',
+      prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 3, repRange: [10, 15] }] }],
+    },
+    {
+      id: 'core-back-extension',
+      name: 'Extensão lombar 45° (isométrico no topo)',
+      focus: 'isolation',
+      rest: '60–75s',
+      rir: '1s de pausa no topo',
+      prescriptions: [
+        { weekRange: [1, 12], targets: [{ sets: 3, setRange: [2, 3], repRange: [10, 12] }] },
+      ],
+      notes: 'Foco em glúteo/lombar sem exagero.',
+    },
   ],
 }
 
@@ -392,7 +479,7 @@ const weeks: Week[] = Array.from({ length: 12 }).map((_, index) => {
 })
 
 export const treinoDani: Program = {
-  name: 'Dani — 12 semanas de Glúteo & Força',
+  name: 'Dani — 12 semanas de Glúteo, Força e Core',
   durationWeeks: 12,
   schedule: [
     { day: 'Segunda-feira', sessionId: 'A' },
@@ -429,27 +516,29 @@ export const treinoDani: Program = {
     },
   ],
   warmup: {
-    duration: '5–8 min',
+    duration: '8–10 min',
     items: [
-      '5 min cardio leve',
-      'Mobilidade: quadril/tornozelo/torácica',
-      'Ativação: abdução 15–20 reps',
-      'Ativação: glute bridge 12–15 reps com 1s de pausa no topo',
+      '5 min leve (bike/esteira)',
+      'Mobilidade rápida: quadril/tornozelo/torácica + 10 agachamentos corpo livre',
+      'Ativação (2x): abdução 15–20 reps',
+      'Ativação (2x): ponte de glúteo 12–15 reps com 1s de pausa no topo',
     ],
   },
   deload: {
     weeks: [4, 8],
     guidance: 'Fique em ~60–70% das séries normais, cargas leves, e RIR 3–4.',
-    reductionNote: 'Não alteramos automaticamente; ajuste na academia.',
+    reductionNote: 'Core no deload: metade das séries, tudo fácil.',
   },
   rules: [
     'Progressão dupla: bater o topo da faixa de reps em todas as séries com boa forma antes de subir 2,5–5% de carga.',
     'RIR: compostos ~1–2; isoladores na última série podem ir a 0–1 RIR.',
     'Descanso: compostos 2–3 min; isoladores 60–90s; mais tempo se precisar para manter técnica.',
     'Duração alvo: 60–75 min.',
+    'Core: qualidade > quantidade; pare se perder alinhamento. Descanso 45–75s; progrida tempo/reps devagar.',
   ],
   volumeAdjustments: [
     'Se a recuperação estiver excelente: +1 série de Hip Thrust no Treino A nas semanas 5–7 e 9–12.',
     'Se a recuperação estiver excelente: +1 série de Mesa Flexora no Treino C nas semanas 5–7 e 9–12.',
+    'Core no deload: metade das séries, manter fácil.',
   ],
 }

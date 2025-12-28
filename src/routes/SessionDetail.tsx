@@ -1,122 +1,183 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import dayjs from 'dayjs'
-import { AlertCircle, Check, PlayCircle, Plus, Timer } from 'lucide-react'
-import { treinoDani } from '@/data/treinoDani'
-import { computeTargetsForWeek, focusLabels, formatTargetText, getSessionTemplate, getWeekInfo } from '@/lib/program'
-import { cn } from '@/lib/utils'
-import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date'
-import { useWorkoutStore } from '@/store/workoutStore'
-import type { SetEntry, SessionType } from '@/types'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { toast } from '@/components/ui/use-toast'
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
+import { AlertCircle, Check, PlayCircle, Plus, Timer } from 'lucide-react';
+import { treinoDani } from '@/data/treinoDani';
+import {
+  computeTargetsForWeek,
+  focusLabels,
+  formatTargetText,
+  getSessionTemplate,
+  getWeekInfo,
+} from '@/lib/program';
+import { cn } from '@/lib/utils';
+import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date';
+import { useWorkoutStore } from '@/store/workoutStore';
+import type { SetEntry, SessionType } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/components/ui/use-toast';
 
 type ExerciseState = {
-  sets: SetEntry[]
-  notes: string
-}
+  sets: SetEntry[];
+  notes: string;
+};
 
 const createDefaultSets = (
   total: number,
   repRange: [number, number],
-  lastLog?: SetEntry[],
+  lastLog?: SetEntry[]
 ): SetEntry[] => {
   if (lastLog && lastLog.length) {
-    const clone = lastLog.map((s) => ({ ...s, completed: false }))
+    const clone = lastLog.map((s) => ({ ...s, completed: false }));
     while (clone.length < total) {
-      clone.push({ weight: 0, reps: repRange[0], rir: 2, completed: false })
+      clone.push({ weight: 0, reps: repRange[0], rir: 2, completed: false });
     }
-    return clone.slice(0, total)
+    return clone.slice(0, total);
   }
   return Array.from({ length: total }).map(() => ({
     weight: 0,
     reps: repRange[0],
     rir: 2,
     completed: false,
-  }))
-}
+  }));
+};
 
 export default function SessionDetail() {
-  const { sessionId, weekNumber: weekParam } = useParams()
-  const sessionType = (sessionId ?? 'A') as SessionType
-  const settings = useWorkoutStore((s) => s.settings)
-  const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
-  const logSession = useWorkoutStore((s) => s.logSession)
-  const navigate = useNavigate()
+  const { sessionId, weekNumber: weekParam } = useParams();
+  const sessionType = (sessionId ?? 'A') as SessionType;
+  const settings = useWorkoutStore((s) => s.settings);
+  const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs);
+  const logSession = useWorkoutStore((s) => s.logSession);
+  const navigate = useNavigate();
 
-  const [exerciseState, setExerciseState] = useState<Record<string, ExerciseState>>({})
-  const activeWeek = Number(weekParam) || getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks)
-  const session = getSessionTemplate(sessionType)
-  const weekInfo = getWeekInfo(activeWeek)
+  const [exerciseState, setExerciseState] = useState<
+    Record<string, ExerciseState>
+  >({});
+  const activeWeek =
+    Number(weekParam) ||
+    getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks);
+  const session = getSessionTemplate(sessionType);
+  const weekInfo = getWeekInfo(activeWeek);
 
   useEffect(() => {
-    const nextState: Record<string, ExerciseState> = {}
+    const nextState: Record<string, ExerciseState> = {};
     session.exercises.forEach((ex) => {
-      const targets = computeTargetsForWeek(ex, activeWeek, settings.recoveryExcellent)
-      const totalSets = targets.reduce((sum, t) => sum + t.targetSets, 0)
-      const lastLog = exerciseLogs.find((l) => l.exerciseId === ex.id)
+      const targets = computeTargetsForWeek(
+        ex,
+        activeWeek,
+        settings.recoveryExcellent
+      );
+      const totalSets = targets.reduce((sum, t) => sum + t.targetSets, 0);
+      const lastLog = exerciseLogs.find((l) => l.exerciseId === ex.id);
       nextState[ex.id] = {
-        sets: createDefaultSets(totalSets, targets[0]?.repRange ?? [8, 12], lastLog?.sets),
+        sets: createDefaultSets(
+          totalSets,
+          targets[0]?.repRange ?? [8, 12],
+          lastLog?.sets
+        ),
         notes: '',
-      }
-    })
-    setExerciseState(nextState)
-  }, [sessionType, activeWeek, settings.recoveryExcellent, exerciseLogs, session.exercises])
+      };
+    });
+    setExerciseState(nextState);
+  }, [
+    sessionType,
+    activeWeek,
+    settings.recoveryExcellent,
+    exerciseLogs,
+    session.exercises,
+  ]);
 
   const handleSetChange = (
     exerciseId: string,
     setIndex: number,
     field: keyof SetEntry,
-    value: number | boolean,
+    value: number | boolean
   ) => {
     setExerciseState((prev) => {
-      const current = prev[exerciseId]
-      if (!current) return prev
+      const current = prev[exerciseId];
+      if (!current) return prev;
       const nextSets = current.sets.map((s, idx) =>
         idx === setIndex
           ? {
               ...s,
-              [field]: field === 'completed' ? Boolean(value) : (value as number),
+              [field]:
+                field === 'completed' ? Boolean(value) : (value as number),
             }
-          : s,
-      ) as SetEntry[]
-      return { ...prev, [exerciseId]: { ...current, sets: nextSets } }
-    })
-  }
+          : s
+      ) as SetEntry[];
+      return { ...prev, [exerciseId]: { ...current, sets: nextSets } };
+    });
+  };
+
+  /**
+   * Validates and filters input to allow only numeric characters
+   * @param value - Input string value
+   * @param allowDecimal - Whether to allow decimal point (default: false)
+   * @returns Filtered string containing only valid numeric characters
+   */
+  const validateNumericInput = (
+    value: string,
+    allowDecimal: boolean = false
+  ): string => {
+    if (value === '') return '';
+    const regex = allowDecimal ? /^[0-9]*\.?[0-9]*$/ : /^[0-9]*$/;
+    const filtered = value
+      .split('')
+      .filter((char) => {
+        if (allowDecimal) {
+          return /[0-9.]/.test(char);
+        }
+        return /[0-9]/.test(char);
+      })
+      .join('');
+    return regex.test(filtered) ? filtered : '';
+  };
 
   const addSet = (exerciseId: string) => {
     setExerciseState((prev) => {
-      const current = prev[exerciseId]
-      if (!current) return prev
-      const repRange = session.exercises.find((e) => e.id === exerciseId)?.prescriptions[0].targets[0].repRange ?? [
-        10, 12,
-      ]
+      const current = prev[exerciseId];
+      if (!current) return prev;
+      const repRange = session.exercises.find((e) => e.id === exerciseId)
+        ?.prescriptions[0].targets[0].repRange ?? [10, 12];
       return {
         ...prev,
         [exerciseId]: {
           ...current,
-          sets: [...current.sets, { weight: 0, reps: repRange[0], rir: 2, completed: false }],
+          sets: [
+            ...current.sets,
+            { weight: 0, reps: repRange[0], rir: 2, completed: false },
+          ],
         },
-      }
-    })
-  }
+      };
+    });
+  };
 
   const handleNotesChange = (exerciseId: string, value: string) => {
     setExerciseState((prev) => {
-      const current = prev[exerciseId]
-      if (!current) return prev
-      return { ...prev, [exerciseId]: { ...current, notes: value } }
-    })
-  }
+      const current = prev[exerciseId];
+      if (!current) return prev;
+      return { ...prev, [exerciseId]: { ...current, notes: value } };
+    });
+  };
 
   const finishSession = async () => {
-    const workoutDate = dayjs().toISOString()
+    const workoutDate = dayjs().toISOString();
     await logSession({
       workout: {
         date: workoutDate,
@@ -134,233 +195,334 @@ export default function SessionDetail() {
         })),
         notes: state.notes,
       })),
-    })
-    toast({ title: 'Sessão salva', description: 'Bom trabalho! Progresso salvo offline.' })
-    navigate('/')
-  }
+    });
+    toast({
+      title: 'Sessão salva',
+      description: 'Bom trabalho! Progresso salvo offline.',
+    });
+    navigate('/');
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className='space-y-4'>
+      <div className='flex flex-wrap items-center justify-between gap-2'>
         <div>
-          <div className="text-sm uppercase tracking-[0.2em] text-muted">Sessão {session.id}</div>
-          <h1 className="text-2xl font-bold text-foreground">{session.subtitle}</h1>
-          <div className="text-sm text-foreground/80">
+          <div className='text-sm uppercase tracking-[0.2em] text-muted'>
+            Sessão {session.id}
+          </div>
+          <h1 className='text-2xl font-bold text-foreground'>
+            {session.subtitle}
+          </h1>
+          <div className='text-sm text-foreground/80'>
             Semana {activeWeek} · {weekInfo.phase}
           </div>
         </div>
-        <Badge variant={weekInfo.deload ? 'muted' : 'default'}>{weekInfo.deload ? 'Deload' : 'Semana-alvo'}</Badge>
+        <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
+          {weekInfo.deload ? 'Deload' : 'Semana-alvo'}
+        </Badge>
       </div>
 
       <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Aqueça primeiro</CardTitle>
-                <CardDescription className="text-foreground/80">{treinoDani.warmup.duration}</CardDescription>
-              </div>
-              <Badge variant="outline">Essencial</Badge>
-            </CardHeader>
+        <CardHeader className='flex flex-row items-center justify-between'>
+          <div>
+            <CardTitle>Aqueça primeiro</CardTitle>
+            <CardDescription className='text-foreground/80'>
+              {treinoDani.warmup.duration}
+            </CardDescription>
+          </div>
+          <Badge variant='outline'>Essencial</Badge>
+        </CardHeader>
         <CardContent>
           <Collapsible>
-            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-neutral/60 bg-neutral/60 px-4 py-3 text-left text-sm font-semibold shadow-soft">
+            <CollapsibleTrigger className='flex w-full items-center justify-between rounded-xl border border-neutral/60 bg-neutral/60 px-4 py-3 text-left text-sm font-semibold shadow-soft'>
               <span>Ver passos do aquecimento</span>
-              <Plus className="h-4 w-4" />
+              <Plus className='h-4 w-4' />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-2 rounded-xl border border-neutral/40 bg-surface px-4 py-3 text-sm text-foreground/90">
+            <CollapsibleContent className='mt-3 space-y-2 rounded-xl border border-neutral/40 bg-surface px-4 py-3 text-sm text-foreground/90'>
               {treinoDani.warmup.items.map((item) => (
-                <div key={item} className="flex items-start gap-2">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-foreground" />
+                <div key={item} className='flex items-start gap-2'>
+                  <div className='mt-1 h-2 w-2 rounded-full bg-foreground' />
                   <span>{item}</span>
                 </div>
               ))}
             </CollapsibleContent>
           </Collapsible>
           {isDeloadWeek(activeWeek) && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20">
-              <AlertCircle className="mt-0.5 h-4 w-4 text-foreground" />
+            <div className='mt-3 flex items-start gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20'>
+              <AlertCircle className='mt-0.5 h-4 w-4 text-foreground' />
               <span>
-                Dica de deload: {treinoDani.deload.guidance} ({treinoDani.deload.reductionNote})
+                Dica de deload: {treinoDani.deload.guidance} (
+                {treinoDani.deload.reductionNote})
               </span>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
+      <div className='space-y-4'>
         {session.exercises.map((exercise) => {
-          const targets = computeTargetsForWeek(exercise, activeWeek, settings.recoveryExcellent)
-          const state = exerciseState[exercise.id]
-          if (!state) return null
-          let cursor = 0
+          const targets = computeTargetsForWeek(
+            exercise,
+            activeWeek,
+            settings.recoveryExcellent
+          );
+          const state = exerciseState[exercise.id];
+          if (!state) return null;
+          let cursor = 0;
           return (
-            <div key={exercise.id} className="relative pl-3">
-              <span className="absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60" aria-hidden />
+            <div key={exercise.id} className='relative pl-3'>
+              <span
+                className='absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60'
+                aria-hidden
+              />
               <Card>
-              <CardHeader className="gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle>{exercise.name}</CardTitle>
-                  <Badge variant="muted">{focusLabels[exercise.focus]}</Badge>
-                  {exercise.optionalVolumeBump &&
-                    exercise.optionalVolumeBump.weeks.includes(activeWeek) &&
-                    settings.recoveryExcellent && (
-                      <Badge variant="success">+1 série ativa</Badge>
+                <CardHeader className='gap-1'>
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <CardTitle>{exercise.name}</CardTitle>
+                    <Badge variant='muted'>{focusLabels[exercise.focus]}</Badge>
+                    {exercise.optionalVolumeBump &&
+                      exercise.optionalVolumeBump.weeks.includes(activeWeek) &&
+                      settings.recoveryExcellent && (
+                        <Badge variant='success'>+1 série ativa</Badge>
+                      )}
+                  </div>
+                  <CardDescription className='flex flex-wrap gap-3 text-xs'>
+                    <span>{exercise.rest} de descanso</span>
+                    <span>{exercise.rir}</span>
+                    {exercise.notes && (
+                      <span className='text-foreground/80'>
+                        {exercise.notes}
+                      </span>
                     )}
-                </div>
-                <CardDescription className="flex flex-wrap gap-3 text-xs">
-                  <span>{exercise.rest} de descanso</span>
-                  <span>{exercise.rir}</span>
-                  {exercise.notes && <span className="text-foreground/80">{exercise.notes}</span>}
-                  {exercise.videoUrl && (
-                    <Button
-                      asChild
-                      variant="secondary"
-                      size="sm"
-                      className="h-9 gap-2 px-3 border-accent text-accent hover:bg-accent hover:text-foreground"
-                    >
-                      <a href={exercise.videoUrl} target="_blank" rel="noreferrer noopener">
-                        <PlayCircle className="h-4 w-4" />
-                        Ver vídeo
-                      </a>
-                    </Button>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {targets.map((t, idx) => (
-                    <Badge key={idx} variant="outline">
-                      {t.label ? `${t.label}: ` : ''}
-                      {formatTargetText(t)}
-                      {exercise.optionalVolumeBump &&
-                        exercise.optionalVolumeBump.weeks.includes(activeWeek) &&
-                        settings.recoveryExcellent &&
-                        idx === 0 && <span className="ml-1 text-[10px]">(+1 série)</span>}
-                    </Badge>
-                  ))}
-                </div>
+                    {exercise.videoUrl && (
+                      <Button
+                        asChild
+                        variant='secondary'
+                        size='sm'
+                        className='h-9 gap-2 px-3 border-accent text-accent hover:bg-accent hover:text-foreground'
+                      >
+                        <a
+                          href={exercise.videoUrl}
+                          target='_blank'
+                          rel='noreferrer noopener'
+                        >
+                          <PlayCircle className='h-4 w-4' />
+                          Ver vídeo
+                        </a>
+                      </Button>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-3'>
+                  <div className='flex flex-wrap gap-2 text-xs'>
+                    {targets.map((t, idx) => (
+                      <Badge key={idx} variant='outline'>
+                        {t.label ? `${t.label}: ` : ''}
+                        {formatTargetText(t)}
+                        {exercise.optionalVolumeBump &&
+                          exercise.optionalVolumeBump.weeks.includes(
+                            activeWeek
+                          ) &&
+                          settings.recoveryExcellent &&
+                          idx === 0 && (
+                            <span className='ml-1 text-[10px]'>(+1 série)</span>
+                          )}
+                      </Badge>
+                    ))}
+                  </div>
 
-                <div className="space-y-2">
-                  {targets.map((target, targetIdx) => {
-                    const setsForTarget = state.sets.slice(cursor, cursor + target.targetSets)
-                    const startIndex = cursor
-                    cursor += target.targetSets
-                    return (
-                      <div key={targetIdx} className="rounded-xl border border-neutral/50 bg-neutral/60 px-3 py-3 shadow-inner shadow-neutral/20">
-                        <div className="mb-2 flex items-center justify-between text-sm font-semibold text-foreground">
-                          <div>
-                            {target.label ?? 'Séries de trabalho'} · {target.repRange[0]}–{target.repRange[1]} repetições
+                  <div className='space-y-2'>
+                    {targets.map((target, targetIdx) => {
+                      const setsForTarget = state.sets.slice(
+                        cursor,
+                        cursor + target.targetSets
+                      );
+                      const startIndex = cursor;
+                      cursor += target.targetSets;
+                      return (
+                        <div
+                          key={targetIdx}
+                          className='rounded-xl border border-neutral/50 bg-neutral/60 px-3 py-3 shadow-inner shadow-neutral/20'
+                        >
+                          <div className='mb-2 flex items-center justify-between text-sm font-semibold text-foreground'>
+                            <div>
+                              {target.label ?? 'Séries'} · {target.repRange[0]}–
+                              {target.repRange[1]} repetições
+                            </div>
+                            <div className='text-xs text-foreground/70'>
+                              Séries {startIndex + 1}–
+                              {startIndex + target.targetSets}
+                            </div>
                           </div>
-                          <div className="text-xs text-foreground/70">
-                            Séries {startIndex + 1}–{startIndex + target.targetSets}
+                          <div className='space-y-2'>
+                            {setsForTarget.map((set, idx) => {
+                              const absoluteIndex = startIndex + idx;
+                              return (
+                                <div
+                                  key={`${exercise.id}-set-${absoluteIndex}`}
+                                  className='grid grid-cols-2 sm:grid-cols-12 items-center gap-2 rounded-lg border border-neutral/10 bg-card px-3 py-2'
+                                >
+                                  <div className='col-span-2 sm:col-span-3 text-xs font-semibold'>
+                                    Série {absoluteIndex + 1}
+                                  </div>
+                                  <div className='col-span-2 sm:col-span-3'>
+                                    <Label className='text-[11px]'>Carga</Label>
+                                    <Input
+                                      aria-label={`${exercise.name} série ${
+                                        absoluteIndex + 1
+                                      } carga`}
+                                      type='text'
+                                      inputMode='decimal'
+                                      value={set.weight}
+                                      onChange={(e) => {
+                                        const validated = validateNumericInput(
+                                          e.target.value,
+                                          true
+                                        );
+                                        handleSetChange(
+                                          exercise.id,
+                                          absoluteIndex,
+                                          'weight',
+                                          validated === ''
+                                            ? 0
+                                            : Number(validated)
+                                        );
+                                      }}
+                                    />
+                                  </div>
+                                  <div className='col-span-2 sm:col-span-2'>
+                                    <Label className='text-[11px]'>
+                                      Repetições
+                                    </Label>
+                                    <Input
+                                      aria-label={`${exercise.name} série ${
+                                        absoluteIndex + 1
+                                      } repetições`}
+                                      type='text'
+                                      inputMode='numeric'
+                                      value={set.reps}
+                                      onChange={(e) => {
+                                        const validated = validateNumericInput(
+                                          e.target.value,
+                                          false
+                                        );
+                                        handleSetChange(
+                                          exercise.id,
+                                          absoluteIndex,
+                                          'reps',
+                                          validated === ''
+                                            ? 0
+                                            : Number(validated)
+                                        );
+                                      }}
+                                    />
+                                  </div>
+                                  <div className='col-span-2 sm:col-span-2'>
+                                    <Label className='text-[11px]'>RIR</Label>
+                                    <Input
+                                      aria-label={`${exercise.name} série ${
+                                        absoluteIndex + 1
+                                      } RIR`}
+                                      type='text'
+                                      inputMode='numeric'
+                                      value={set.rir}
+                                      onChange={(e) => {
+                                        const validated = validateNumericInput(
+                                          e.target.value,
+                                          false
+                                        );
+                                        const numValue =
+                                          validated === ''
+                                            ? 0
+                                            : Number(validated);
+                                        // Clamp value between 0 and 5
+                                        const clampedValue = Math.min(
+                                          Math.max(numValue, 0),
+                                          5
+                                        );
+                                        handleSetChange(
+                                          exercise.id,
+                                          absoluteIndex,
+                                          'rir',
+                                          clampedValue
+                                        );
+                                      }}
+                                    />
+                                  </div>
+                                  <div className='col-span-2 sm:col-span-2 flex items-center gap-2'>
+                                    <Button
+                                      type='button'
+                                      variant='default'
+                                      size='sm'
+                                      className={cn(
+                                        'h-9 px-3 text-xs font-semibold',
+                                        set.completed
+                                          ? ''
+                                          : 'opacity-80 hover:opacity-100'
+                                      )}
+                                      aria-label={`${exercise.name} série ${
+                                        absoluteIndex + 1
+                                      } concluída`}
+                                      aria-pressed={Boolean(set.completed)}
+                                      onClick={() =>
+                                        handleSetChange(
+                                          exercise.id,
+                                          absoluteIndex,
+                                          'completed',
+                                          !set.completed
+                                        )
+                                      }
+                                    >
+                                      {set.completed ? 'Feito' : 'Marcar feito'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          {setsForTarget.map((set, idx) => {
-                            const absoluteIndex = startIndex + idx
-                            return (
-                              <div
-                                key={`${exercise.id}-set-${absoluteIndex}`}
-                                className="grid grid-cols-2 sm:grid-cols-12 items-center gap-2 rounded-lg border border-neutral/10 bg-card px-3 py-2"
-                              >
-                                <div className="col-span-2 sm:col-span-3 text-xs font-semibold">
-                                  Série {absoluteIndex + 1}
-                                </div>
-                                <div className="col-span-2 sm:col-span-3">
-                                  <Label className="text-[11px]">Carga</Label>
-                                  <Input
-                                    aria-label={`${exercise.name} série ${absoluteIndex + 1} carga`}
-                                    type="number"
-                                    inputMode="decimal"
-                                    value={set.weight}
-                                    onChange={(e) =>
-                                      handleSetChange(exercise.id, absoluteIndex, 'weight', Number(e.target.value))
-                                    }
-                                  />
-                                </div>
-                                <div className="col-span-2 sm:col-span-2">
-                                  <Label className="text-[11px]">Repetições</Label>
-                                  <Input
-                                    aria-label={`${exercise.name} série ${absoluteIndex + 1} repetições`}
-                                    type="number"
-                                    inputMode="numeric"
-                                    value={set.reps}
-                                    onChange={(e) =>
-                                      handleSetChange(exercise.id, absoluteIndex, 'reps', Number(e.target.value))
-                                    }
-                                  />
-                                </div>
-                                <div className="col-span-2 sm:col-span-2">
-                                  <Label className="text-[11px]">RIR</Label>
-                                  <Input
-                                    aria-label={`${exercise.name} série ${absoluteIndex + 1} RIR`}
-                                    type="number"
-                                    min={0}
-                                    max={5}
-                                    inputMode="numeric"
-                                    value={set.rir}
-                                    onChange={(e) =>
-                                      handleSetChange(exercise.id, absoluteIndex, 'rir', Number(e.target.value))
-                                    }
-                                  />
-                                </div>
-                                <div className="col-span-2 sm:col-span-2 flex items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="default"
-                                    size="sm"
-                                    className={cn(
-                                      'h-9 px-3 text-xs font-semibold',
-                                      set.completed ? '' : 'opacity-80 hover:opacity-100',
-                                    )}
-                                    aria-label={`${exercise.name} série ${absoluteIndex + 1} concluída`}
-                                    aria-pressed={Boolean(set.completed)}
-                                    onClick={() =>
-                                      handleSetChange(exercise.id, absoluteIndex, 'completed', !set.completed)
-                                    }
-                                  >
-                                    {set.completed ? 'Feito' : 'Marcar feito'}
-                                  </Button>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
 
-                <Button variant="secondary" size="sm" onClick={() => addSet(exercise.id)} aria-label="Adicionar série extra">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar série
-                </Button>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => addSet(exercise.id)}
+                    aria-label='Adicionar série extra'
+                  >
+                    <Plus className='mr-2 h-4 w-4' />
+                    Adicionar série
+                  </Button>
 
-                <div className="space-y-1">
-                  <Label className="text-foreground">Notas</Label>
-                  <Textarea
-                    aria-label={`${exercise.name} notas`}
-                    placeholder="Dicas de técnica, tempo, o que lembrar."
-                    value={state.notes}
-                    onChange={(e) => handleNotesChange(exercise.id, e.target.value)}
-                  />
-                </div>
-              </CardContent>
+                  <div className='space-y-1'>
+                    <Label className='text-foreground'>Notas</Label>
+                    <Textarea
+                      aria-label={`${exercise.name} notas`}
+                      placeholder='Dicas de técnica, tempo, o que lembrar.'
+                      value={state.notes}
+                      onChange={(e) =>
+                        handleNotesChange(exercise.id, e.target.value)
+                      }
+                    />
+                  </div>
+                </CardContent>
               </Card>
             </div>
-          )
+          );
         })}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={finishSession} size="lg">
-          <Check className="mr-2 h-5 w-5" />
+      <div className='flex flex-wrap gap-3'>
+        <Button onClick={finishSession} size='lg'>
+          <Check className='mr-2 h-5 w-5' />
           Finalizar sessão
         </Button>
-        <Button variant="secondary" onClick={() => navigate(-1)}>
-          <Timer className="mr-2 h-4 w-4" />
+        <Button variant='secondary' onClick={() => navigate(-1)}>
+          <Timer className='mr-2 h-4 w-4' />
           Voltar
         </Button>
       </div>
     </div>
-  )
+  );
 }
