@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Clock4, Dumbbell } from 'lucide-react'
 import { treinoDani } from '@/data/treinoDani'
@@ -18,6 +18,10 @@ export default function WeekView() {
     () => treinoDani.weeks.find((w) => w.number === week) ?? treinoDani.weeks[0],
     [week],
   )
+
+  useEffect(() => {
+    setWeek(getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks))
+  }, [settings.programStart])
 
   return (
     <div className="space-y-4">

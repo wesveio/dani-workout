@@ -153,8 +153,25 @@ export default function SessionDetail() {
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
-      const repRange = session.exercises.find((e) => e.id === exerciseId)
-        ?.prescriptions[0].targets[0].repRange ?? [10, 12];
+      const exercise = session.exercises.find((e) => e.id === exerciseId);
+      if (!exercise) return prev;
+      const targets = computeTargetsForWeek(
+        exercise,
+        activeWeek,
+        settings.recoveryExcellent
+      );
+      let repRange: [number, number] = [10, 12];
+      if (targets.length) {
+        let idx = current.sets.length;
+        repRange = targets[targets.length - 1].repRange;
+        for (const target of targets) {
+          if (idx < target.targetSets) {
+            repRange = target.repRange;
+            break;
+          }
+          idx -= target.targetSets;
+        }
+      }
       return {
         ...prev,
         [exerciseId]: {
@@ -177,30 +194,39 @@ export default function SessionDetail() {
   };
 
   const finishSession = async () => {
-    const workoutDate = dayjs().toISOString();
-    await logSession({
-      workout: {
-        date: workoutDate,
-        weekNumber: activeWeek,
-        sessionType,
-        deload: isDeloadWeek(activeWeek),
-      },
-      exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
-        exerciseId,
-        sets: state.sets.map((s) => ({
-          weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
-          reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
-          rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
-          completed: Boolean(s.completed),
+    try {
+      const workoutDate = dayjs().toISOString();
+      await logSession({
+        workout: {
+          date: workoutDate,
+          weekNumber: activeWeek,
+          sessionType,
+          deload: isDeloadWeek(activeWeek),
+        },
+        exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
+          exerciseId,
+          sets: state.sets.map((s) => ({
+            weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
+            reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
+            rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
+            completed: Boolean(s.completed),
+          })),
+          notes: state.notes,
         })),
-        notes: state.notes,
-      })),
-    });
-    toast({
-      title: 'Sessão salva',
-      description: 'Bom trabalho! Progresso salvo offline.',
-    });
-    navigate('/');
+      });
+      toast({
+        title: 'Sessão salva',
+        description: 'Bom trabalho! Progresso salvo offline.',
+      });
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Não foi possível salvar',
+        description: 'Falha ao gravar no cache offline. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

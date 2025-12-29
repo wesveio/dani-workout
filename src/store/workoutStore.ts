@@ -52,6 +52,7 @@ type WorkoutStore = {
   exerciseLogs: ExerciseLog[]
   settings: SettingsState
   loading: boolean
+  error: string | null
   init: () => Promise<void>
   logSession: (payload: {
     workout: Omit<WorkoutLog, 'id'>
@@ -73,22 +74,37 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => ({
   exerciseLogs: [],
   settings: defaultSettings,
   loading: true,
+  error: null,
   init: async () => {
-    const [workouts, exerciseLogs, settings] = await Promise.all([
-      db.workouts.toArray(),
-      db.exerciseLogs.toArray(),
-      db.settings.get('app'),
-    ])
-    const sortedWorkouts = workouts.sort((a, b) => (dayjs(b.date).valueOf() - dayjs(a.date).valueOf()))
-    const sortedExerciseLogs = exerciseLogs.sort(
-      (a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf(),
-    )
-    set({
-      workouts: sortedWorkouts,
-      exerciseLogs: sortedExerciseLogs,
-      settings: settings?.value ?? defaultSettings,
-      loading: false,
-    })
+    try {
+      const [workouts, exerciseLogs, settings] = await Promise.all([
+        db.workouts.toArray(),
+        db.exerciseLogs.toArray(),
+        db.settings.get('app'),
+      ])
+      const sortedWorkouts = workouts
+        .slice()
+        .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+      const sortedExerciseLogs = exerciseLogs
+        .slice()
+        .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+      set({
+        workouts: sortedWorkouts,
+        exerciseLogs: sortedExerciseLogs,
+        settings: settings?.value ?? defaultSettings,
+        loading: false,
+        error: null,
+      })
+    } catch (err) {
+      console.error(err)
+      set({
+        workouts: [],
+        exerciseLogs: [],
+        settings: defaultSettings,
+        loading: false,
+        error: 'Falha ao carregar dados locais. Reinicie ou limpe o cache.',
+      })
+    }
   },
   logSession: async ({ workout, exercises }) => {
     const workoutId = makeId()
@@ -139,15 +155,21 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => ({
       throw new Error('Invalid data format')
     }
     const bundle = parsed.data
+    const sortedWorkouts = bundle.workouts
+      .slice()
+      .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+    const sortedExerciseLogs = bundle.exerciseLogs
+      .slice()
+      .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
     await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, async () => {
       await Promise.all([db.workouts.clear(), db.exerciseLogs.clear(), db.settings.clear()])
-      await db.workouts.bulkAdd(bundle.workouts)
-      await db.exerciseLogs.bulkAdd(bundle.exerciseLogs)
+      await db.workouts.bulkAdd(sortedWorkouts)
+      await db.exerciseLogs.bulkAdd(sortedExerciseLogs)
       await db.settings.put({ key: 'app', value: bundle.settings ?? get().settings })
     })
     set({
-      workouts: bundle.workouts,
-      exerciseLogs: bundle.exerciseLogs,
+      workouts: sortedWorkouts,
+      exerciseLogs: sortedExerciseLogs,
       settings: bundle.settings ?? get().settings,
     })
   },

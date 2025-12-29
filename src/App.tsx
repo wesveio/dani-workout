@@ -13,6 +13,7 @@ import { Card, CardContent } from './components/ui/card'
 function App() {
   const init = useWorkoutStore((s) => s.init)
   const loading = useWorkoutStore((s) => s.loading)
+  const error = useWorkoutStore((s) => s.error)
 
   useEffect(() => {
     init()
@@ -25,6 +26,19 @@ function App() {
           <CardContent className="p-6 text-center">
             <div className="text-sm font-semibold">Carregando seus dados…</div>
             <div className="mt-2 text-xs text-foreground/70">Cache offline (IndexedDB)</div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background">
+        <Card className="w-[340px] border border-red-400/40 bg-surface">
+          <CardContent className="p-6 text-center space-y-2">
+            <div className="text-sm font-semibold text-red-200">Erro ao carregar</div>
+            <div className="text-xs text-foreground/80">{error}</div>
           </CardContent>
         </Card>
       </div>

@@ -41,6 +41,8 @@ export default function Settings() {
     } catch (err) {
       console.error(err)
       toast({ title: 'Falha ao importar', description: 'Arquivo inválido. Verifique o formato.' })
+    } finally {
+      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -90,8 +92,12 @@ export default function Settings() {
             aria-label="Data de início do programa"
             value={dayjs(settings.programStart).format('YYYY-MM-DD')}
             onChange={(e) => {
-              const iso = dayjs(e.target.value).toISOString()
-              saveSettings({ programStart: iso })
+              const parsed = dayjs(e.target.value)
+              if (!parsed.isValid()) {
+                toast({ title: 'Data inválida', description: 'Escolha uma data válida para recalcular as semanas.' })
+                return
+              }
+              saveSettings({ programStart: parsed.toISOString() })
             }}
           />
         </CardContent>
