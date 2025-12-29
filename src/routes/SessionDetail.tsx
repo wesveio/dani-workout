@@ -357,7 +357,7 @@ export default function SessionDetail() {
       toast({
         title: 'Não foi possível salvar',
         description: 'Falha ao gravar no cache offline. Tente novamente.',
-        variant: 'destructive',
+        className: 'border-red-500/50 bg-red-500/10',
       });
     }
   };
