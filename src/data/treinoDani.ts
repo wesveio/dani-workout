@@ -97,7 +97,7 @@ const lowerA: SessionTemplate = {
     },
     {
       id: 'hip-thrust',
-      name: 'Elevação de quadril com barra (hip thrust) — pausa 1s no topo',
+      name: 'Elevação de quadril com barra — pausa 1s no topo',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2 (travar suave no topo)',
@@ -177,6 +177,7 @@ const lowerA: SessionTemplate = {
       focus: 'isolation',
       rest: '60–75s',
       rir: 'Manter tensão',
+      videoUrl: 'https://www.youtube.com/results?search_query=prancha+rkc+como+fazer',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 3, repRange: [20, 35], label: 'Segundos' }] },
       ],
@@ -184,19 +185,21 @@ const lowerA: SessionTemplate = {
     },
     {
       id: 'core-dead-bug',
-      name: 'Dead Bug (controlado)',
+      name: 'Inseto Morto (controlado)',
       focus: 'isolation',
       rest: '60s',
       rir: 'Controle total',
+      videoUrl: 'https://www.youtube.com/results?search_query=dead+bug+exercicio+core+tutorial',
       prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 3, repRange: [8, 12] }] }],
       notes: 'Por lado; coluna neutra e respiração.',
     },
     {
       id: 'core-pallof',
-      name: 'Prensa anti-rotação no cabo (pallof press)',
+      name: 'Prensa anti-rotação no cabo',
       focus: 'isolation',
       rest: '60–75s',
       rir: 'Estável, sem girar',
+      videoUrl: 'https://www.youtube.com/results?search_query=pallof+press+anti+rotacao+core',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 3, setRange: [2, 3], repRange: [10, 14] }] },
       ],
@@ -212,7 +215,7 @@ const upperB: SessionTemplate = {
   exercises: [
     {
       id: 'pulldown',
-      name: 'Puxada alta (pulldown) — barra ou triângulo',
+      name: 'Puxada alta — barra ou triângulo',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2',
@@ -282,7 +285,7 @@ const upperB: SessionTemplate = {
     },
     {
       id: 'cable-kickback',
-      name: 'Elevação de glúteo no cabo (kickback)',
+      name: 'Elevação de glúteo no cabo',
       focus: 'pump',
       rest: '60s',
       rir: 'Última série RIR 0–1',
@@ -308,10 +311,11 @@ const upperB: SessionTemplate = {
     },
     {
       id: 'core-cable-crunch',
-      name: 'Abdominal na polia (cable crunch)',
+      name: 'Abdominal na polia',
       focus: 'isolation',
       rest: '60s',
       rir: 'Controle, sem puxar com braço',
+      videoUrl: 'https://www.youtube.com/results?search_query=abdominal+polia+cable+crunch+tutorial',
       prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 4, repRange: [10, 15] }] }],
     },
     {
@@ -320,6 +324,7 @@ const upperB: SessionTemplate = {
       focus: 'isolation',
       rest: '60–75s',
       rir: 'Manter alinhamento',
+      videoUrl: 'https://www.youtube.com/results?search_query=prancha+lateral+core+como+fazer',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 3, repRange: [20, 40], label: 'Segundos por lado' }] },
       ],
@@ -330,6 +335,7 @@ const upperB: SessionTemplate = {
       focus: 'compound',
       rest: '60–90s',
       rir: 'Postura neutra',
+      videoUrl: 'https://www.youtube.com/results?search_query=farmers+walk+caminhada+fazendeiro+halter',
       prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 4, repRange: [20, 40], label: 'Metros' }] }],
       notes: 'Tronco reto; sem inclinar.',
     },
@@ -372,7 +378,7 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'leg-press',
-      name: 'Leg Press (pés altos/largos)',
+      name: 'Pressão de Pernas (pés altos/largos)',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2',
@@ -383,7 +389,7 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'smith-lunge',
-      name: 'Avanço no Smith (ou passadas)',
+      name: 'Avanço na máquina Smith (ou passadas)',
       focus: 'compound',
       rest: '2–3 min entre pernas',
       rir: 'RIR 1–2',
@@ -394,7 +400,7 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'glute-bridge-machine',
-      name: 'Glute Bridge máquina / pull-through',
+      name: 'Ponte de Glúteo máquina / puxada frontal',
       focus: 'pump',
       rest: '90s',
       rir: 'Última série RIR 0–1',
@@ -423,6 +429,7 @@ const lowerC: SessionTemplate = {
       focus: 'isolation',
       rest: '60–75s',
       rir: 'Controle sem balançar',
+      videoUrl: 'https://www.youtube.com/results?search_query=elevacao+joelhos+barra+abdominal+tutorial',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 4, setRange: [3, 4], repRange: [8, 12] }] },
       ],
@@ -433,6 +440,7 @@ const lowerC: SessionTemplate = {
       focus: 'isolation',
       rest: '60s',
       rir: 'Controlado, sem impulso',
+      videoUrl: 'https://www.youtube.com/results?search_query=crunch+reverso+banco+abdominal+tutorial',
       prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 3, repRange: [10, 15] }] }],
     },
     {
@@ -441,6 +449,7 @@ const lowerC: SessionTemplate = {
       focus: 'isolation',
       rest: '60–75s',
       rir: '1s de pausa no topo',
+      videoUrl: 'https://www.youtube.com/results?search_query=extensao+lombar+45+gluteo+tutorial',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 3, setRange: [2, 3], repRange: [10, 12] }] },
       ],
@@ -537,7 +546,7 @@ export const treinoDani: Program = {
     'Core: qualidade > quantidade; pare se perder alinhamento. Descanso 45–75s; progrida tempo/reps devagar.',
   ],
   volumeAdjustments: [
-    'Se a recuperação estiver excelente: +1 série de Hip Thrust no Treino A nas semanas 5–7 e 9–12.',
+    'Se a recuperação estiver excelente: +1 série de Elevação de Quadril no Treino A nas semanas 5–7 e 9–12.',
     'Se a recuperação estiver excelente: +1 série de Mesa Flexora no Treino C nas semanas 5–7 e 9–12.',
     'Core no deload: metade das séries, manter fácil.',
   ],
