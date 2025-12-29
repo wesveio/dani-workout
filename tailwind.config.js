@@ -7,7 +7,7 @@ export default {
         background: '#161616',
         foreground: '#F7F7F5',
         surface: '#1F1F1F',
-        muted: '#A6A6A6',
+        muted: '#CECECE',
         accent: '#4EFF74',
         accentSecondary: '#4495FF',
         neutral: '#2C2C2C',

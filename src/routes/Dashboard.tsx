@@ -42,9 +42,16 @@ export default function Dashboard() {
   const today = dayjs()
   const todaySession = getSessionForDate(today, treinoDani.schedule)
   const sessionTemplate = getSessionTemplate(todaySession.sessionId)
+  const isRestDay = todaySession.next
   const expectedSessions = Math.min(weekNumber, treinoDani.durationWeeks) * 3
   const adherence = Math.min(100, Math.round((workouts.length / expectedSessions) * 100))
   const recent = workouts.slice(0, 3)
+  const ctaPrimary = isRestDay
+    ? { to: `/session/${sessionTemplate.id}/${weekNumber}`, label: `Adiantar sessão ${sessionTemplate.id}` }
+    : { to: `/session/${sessionTemplate.id}/${weekNumber}`, label: `Iniciar sessão ${sessionTemplate.id}` }
+  const ctaSecondary = isRestDay
+    ? { to: '/week', label: 'Manter descanso / planejar' }
+    : { to: '/week', label: 'Ver semana' }
 
   return (
     <div className="space-y-5">
@@ -55,10 +62,12 @@ export default function Dashboard() {
               <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
                 Semana {weekNumber} · {weekInfo.phase}
               </Badge>
-              {todaySession.next && <Badge variant="outline">Próxima sessão</Badge>}
+              {isRestDay ? <Badge variant="outline">Dia de descanso</Badge> : <Badge variant="outline">Sessão do dia</Badge>}
             </div>
             <div className="flex items-center gap-2">
-              <CardTitle className="text-2xl font-bold">{today.format('dddd, D [de] MMM')}</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {isRestDay ? 'Recupere hoje' : today.format('dddd, D [de] MMM')}
+              </CardTitle>
               {isDeloadWeek(weekNumber) && (
                 <span className="flex items-center gap-2 rounded-full bg-neutral/60 px-3 py-1 text-xs font-semibold text-foreground">
                   <AlertTriangle className="h-4 w-4 text-accent" />
@@ -67,7 +76,7 @@ export default function Dashboard() {
               )}
             </div>
             <CardDescription className="text-foreground">
-              {todaySession.next ? 'Próxima' : 'Hoje'} · Sessão {sessionTemplate.id} — {sessionTemplate.subtitle}
+              {isRestDay ? todaySession.label : 'Hoje'} · Sessão {sessionTemplate.id} — {sessionTemplate.subtitle}
             </CardDescription>
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">{weekInfo.emphasis}</Badge>
@@ -77,14 +86,19 @@ export default function Dashboard() {
               </Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Button asChild size="lg">
-                <Link to={`/session/${sessionTemplate.id}/${weekNumber}`} aria-label="Iniciar treino">
+              <Button asChild size="lg" variant={isRestDay ? 'default' : 'default'}>
+                <Link
+                  to={ctaPrimary.to}
+                  aria-label={ctaPrimary.label}
+                >
                   <PlayCircle className="mr-2 h-5 w-5" />
-                  Iniciar sessão {sessionTemplate.id}
+                  {ctaPrimary.label}
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg">
-                <Link to="/week" aria-label="Ver semana">Ver semana</Link>
+                <Link to={ctaSecondary.to} aria-label={ctaSecondary.label}>
+                  {ctaSecondary.label}
+                </Link>
               </Button>
             </div>
           </div>

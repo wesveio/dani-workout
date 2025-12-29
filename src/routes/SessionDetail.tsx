@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { AlertCircle, Check, PlayCircle, Plus, Timer } from 'lucide-react';
+import {
+  AlertCircle,
+  Check,
+  PlayCircle,
+  Plus,
+  RefreshCw,
+  Timer,
+} from 'lucide-react';
 import { treinoDani } from '@/data/treinoDani';
 import {
   computeTargetsForWeek,
@@ -13,7 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date';
 import { useWorkoutStore } from '@/store/workoutStore';
-import type { SetEntry, SessionType } from '@/types';
+import type { ExerciseLog, SetEntry, SessionType } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +44,23 @@ type ExerciseState = {
   sets: SetEntry[];
   notes: string;
 };
+
+const sparkPositions = [
+  { left: 10, top: 18 },
+  { left: 22, top: 32 },
+  { left: 35, top: 12 },
+  { left: 48, top: 28 },
+  { left: 62, top: 16 },
+  { left: 74, top: 30 },
+  { left: 88, top: 20 },
+  { left: 18, top: 58 },
+  { left: 32, top: 72 },
+  { left: 46, top: 60 },
+  { left: 60, top: 78 },
+  { left: 76, top: 62 },
+  { left: 28, top: 86 },
+  { left: 64, top: 90 },
+];
 
 const createDefaultSets = (
   total: number,
@@ -69,13 +93,63 @@ export default function SessionDetail() {
   const [exerciseState, setExerciseState] = useState<
     Record<string, ExerciseState>
   >({});
+  const celebrateTimeoutRef = useRef<number | null>(null);
+  const navigateTimeoutRef = useRef<number | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
   const activeWeek =
     Number(weekParam) ||
     getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks);
   const session = getSessionTemplate(sessionType);
   const weekInfo = getWeekInfo(activeWeek);
+  const lastLogsByExercise = useMemo(() => {
+    const map = new Map<string, ExerciseLog>();
+    exerciseLogs.forEach((log) => {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, log);
+      }
+    });
+    return map;
+  }, [exerciseLogs]);
+  const [restSeconds, setRestSeconds] = useState(0);
+  const [restRunning, setRestRunning] = useState(false);
+  const parseRestToSeconds = (restText?: string) => {
+    if (!restText) return 90;
+    const match = restText.match(/([0-9]+)/);
+    const minutes = match ? Number(match[1]) : 1.5;
+    if (!Number.isFinite(minutes) || minutes <= 0) return 90;
+    return Math.round(minutes * 60);
+  };
+  const formatRestClock = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+  const startRestTimer = (restText?: string) => {
+    setRestSeconds(parseRestToSeconds(restText));
+    setRestRunning(true);
+  };
+  const resetRestTimer = () => {
+    setRestRunning(false);
+    setRestSeconds(0);
+  };
+  const progress = useMemo(() => {
+    const totals = Object.values(exerciseState).reduce(
+      (acc, ex) => {
+        acc.total += ex.sets.length;
+        acc.completed += ex.sets.filter((s) => s.completed).length;
+        return acc;
+      },
+      { total: 0, completed: 0 }
+    );
+    return {
+      ...totals,
+      percent: totals.total
+        ? Math.round((totals.completed / totals.total) * 100)
+        : 0,
+    };
+  }, [exerciseState]);
 
-  useEffect(() => {
+  const initialExerciseState = useMemo(() => {
     const nextState: Record<string, ExerciseState> = {};
     session.exercises.forEach((ex) => {
       const targets = computeTargetsForWeek(
@@ -84,7 +158,7 @@ export default function SessionDetail() {
         settings.recoveryExcellent
       );
       const totalSets = targets.reduce((sum, t) => sum + t.targetSets, 0);
-      const lastLog = exerciseLogs.find((l) => l.exerciseId === ex.id);
+      const lastLog = lastLogsByExercise.get(ex.id);
       nextState[ex.id] = {
         sets: createDefaultSets(
           totalSets,
@@ -94,14 +168,42 @@ export default function SessionDetail() {
         notes: '',
       };
     });
-    setExerciseState(nextState);
+    return nextState;
   }, [
-    sessionType,
     activeWeek,
-    settings.recoveryExcellent,
-    exerciseLogs,
+    lastLogsByExercise,
     session.exercises,
+    settings.recoveryExcellent,
   ]);
+
+  useEffect(() => {
+    setExerciseState(initialExerciseState);
+  }, [initialExerciseState]);
+
+  useEffect(() => {
+    if (!restRunning || restSeconds <= 0) return;
+    const interval = window.setInterval(() => {
+      setRestSeconds((prev) => {
+        if (prev <= 1) {
+          setRestRunning(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [restRunning, restSeconds]);
+
+  useEffect(() => {
+    return () => {
+      if (celebrateTimeoutRef.current) {
+        window.clearTimeout(celebrateTimeoutRef.current);
+      }
+      if (navigateTimeoutRef.current) {
+        window.clearTimeout(navigateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSetChange = (
     exerciseId: string,
@@ -172,14 +274,39 @@ export default function SessionDetail() {
           idx -= target.targetSets;
         }
       }
+      const lastSet = current.sets[current.sets.length - 1];
+      const baseSet = lastSet
+        ? { ...lastSet, completed: false }
+        : { weight: 0, reps: repRange[0], rir: 2, completed: false };
       return {
         ...prev,
         [exerciseId]: {
           ...current,
           sets: [
             ...current.sets,
-            { weight: 0, reps: repRange[0], rir: 2, completed: false },
+            {
+              ...baseSet,
+              reps: baseSet.reps || repRange[0],
+              rir: Number.isFinite(baseSet.rir) ? baseSet.rir : 2,
+            },
           ],
+        },
+      };
+    });
+  };
+
+  const copyLastLog = (exerciseId: string) => {
+    const last = lastLogsByExercise.get(exerciseId);
+    if (!last) return;
+    setExerciseState((prev) => {
+      const current = prev[exerciseId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [exerciseId]: {
+          ...current,
+          sets: last.sets.map((s) => ({ ...s, completed: false })),
+          notes: last.notes ?? '',
         },
       };
     });
@@ -218,7 +345,13 @@ export default function SessionDetail() {
         title: 'Sessão salva',
         description: 'Bom trabalho! Progresso salvo offline.',
       });
-      navigate('/');
+      setCelebrating(true);
+      celebrateTimeoutRef.current = window.setTimeout(() => {
+        setCelebrating(false);
+      }, 8000);
+      navigateTimeoutRef.current = window.setTimeout(() => {
+        navigate('/');
+      }, 8200);
     } catch (err) {
       console.error(err);
       toast({
@@ -231,6 +364,44 @@ export default function SessionDetail() {
 
   return (
     <div className='space-y-4'>
+      {celebrating && (
+        <div className='fixed inset-0 z-30 pointer-events-none'>
+          <div className='absolute inset-0 bg-black/40 backdrop-blur-sm' />
+          <div className='absolute inset-0 overflow-hidden'>
+            {sparkPositions.map((pos, idx) => (
+              <span
+                key={idx}
+                className='absolute h-2 w-2 rounded-full bg-accent shadow-soft'
+                style={{
+                  left: `${pos.left}%`,
+                  top: `${pos.top}%`,
+                  animation: `float-spark 1.1s ease-out forwards`,
+                  animationDelay: `${idx * 40}ms`,
+                  opacity: 0.9,
+                }}
+              />
+            ))}
+          </div>
+          <div className='relative z-10 flex h-full items-center justify-center'>
+            <div
+              className='rounded-3xl bg-surface/90 px-6 py-5 text-center shadow-soft border border-accent/40'
+              style={{ animation: 'celebration-pop 0.9s ease-out' }}
+              role='status'
+              aria-live='polite'
+            >
+              <div className='text-sm uppercase tracking-[0.2em] text-accent'>
+                Concluído
+              </div>
+              <div className='text-2xl font-bold text-foreground'>
+                Treino salvo! 🎉
+              </div>
+              <div className='text-sm text-foreground/80'>
+                Boa! Recuperação e hidratação agora.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <div>
           <div className='text-sm uppercase tracking-[0.2em] text-muted'>
@@ -294,6 +465,7 @@ export default function SessionDetail() {
           );
           const state = exerciseState[exercise.id];
           if (!state) return null;
+          const lastLogAvailable = lastLogsByExercise.get(exercise.id);
           let cursor = 0;
           return (
             <div key={exercise.id} className='relative pl-3'>
@@ -335,6 +507,26 @@ export default function SessionDetail() {
                           <PlayCircle className='h-4 w-4' />
                           Ver vídeo
                         </a>
+                      </Button>
+                    )}
+                    <Button
+                      variant='secondary'
+                      size='sm'
+                      className='h-9 gap-2 px-3'
+                      onClick={() => startRestTimer(exercise.rest)}
+                    >
+                      <Timer className='h-4 w-4' />
+                      Descanso
+                    </Button>
+                    {lastLogAvailable && (
+                      <Button
+                        variant='secondary'
+                        size='sm'
+                        className='h-9 gap-2 px-3'
+                        onClick={() => copyLastLog(exercise.id)}
+                      >
+                        <RefreshCw className='h-4 w-4' />
+                        Usar último treino
                       </Button>
                     )}
                   </CardDescription>
@@ -539,15 +731,56 @@ export default function SessionDetail() {
         })}
       </div>
 
-      <div className='flex flex-wrap gap-3'>
-        <Button onClick={finishSession} size='lg'>
-          <Check className='mr-2 h-5 w-5' />
-          Finalizar sessão
-        </Button>
-        <Button variant='secondary' onClick={() => navigate(-1)}>
-          <Timer className='mr-2 h-4 w-4' />
-          Voltar
-        </Button>
+      <div className='sticky bottom-5 z-10'>
+        <Card className='border-neutral/60 bg-surface/90 backdrop-blur'>
+          <CardContent className='flex flex-wrap items-center gap-3'>
+            <div className='flex min-w-[200px] flex-1 flex-col gap-1'>
+              <div className='flex items-center justify-between text-xs text-foreground/70'>
+                <span>
+                  {progress.completed}/{progress.total || 0} séries
+                </span>
+                <span>{progress.percent}%</span>
+              </div>
+              <div className='h-2 w-full overflow-hidden rounded-full bg-neutral/70'>
+                <div
+                  className='h-full rounded-full bg-gradient-to-r from-accent to-accentSecondary transition-all'
+                  style={{ width: `${progress.percent}%` }}
+                  aria-label='Progresso da sessão'
+                />
+              </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='secondary'
+                size='sm'
+                onClick={() => startRestTimer(session.exercises[0]?.rest)}
+              >
+                <Timer className='mr-2 h-4 w-4' />
+                {restRunning
+                  ? formatRestClock(restSeconds)
+                  : 'Iniciar descanso'}
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={resetRestTimer}
+                disabled={!restSeconds}
+              >
+                Limpar
+              </Button>
+            </div>
+            <div className='flex flex-wrap gap-2'>
+              <Button onClick={finishSession} size='lg'>
+                <Check className='mr-2 h-5 w-5' />
+                Finalizar sessão
+              </Button>
+              <Button variant='secondary' onClick={() => navigate(-1)}>
+                <Timer className='mr-2 h-4 w-4' />
+                Voltar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
