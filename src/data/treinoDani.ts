@@ -179,9 +179,19 @@ const lowerA: SessionTemplate = {
       rir: 'Manter tensão',
       videoUrl: 'https://www.youtube.com/results?search_query=prancha+rkc+como+fazer',
       prescriptions: [
-        { weekRange: [1, 12], targets: [{ sets: 3, repRange: [20, 35], label: 'Segundos' }] },
+        {
+          weekRange: [1, 12],
+          targets: [
+            {
+              sets: 3,
+              repRange: [20, 35],
+              label: 'Segundos',
+              notes: '3 séries fixas de 20–35s',
+            },
+          ],
+        },
       ],
-      notes: 'Tensão máxima sem cair a lombar.',
+      notes: '3 séries fixas de 20–35s; tensão máxima sem cair a lombar.',
     },
     {
       id: 'core-dead-bug',

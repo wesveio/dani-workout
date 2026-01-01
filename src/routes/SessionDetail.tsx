@@ -93,6 +93,7 @@ export default function SessionDetail() {
   const [exerciseState, setExerciseState] = useState<
     Record<string, ExerciseState>
   >({});
+  const [hasUnsaved, setHasUnsaved] = useState(false);
   const celebrateTimeoutRef = useRef<number | null>(null);
   const navigateTimeoutRef = useRef<number | null>(null);
   const [celebrating, setCelebrating] = useState(false);
@@ -112,6 +113,8 @@ export default function SessionDetail() {
   }, [exerciseLogs]);
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
+  const draftKey = `session-draft-${sessionType}-${activeWeek}`;
+  const exerciseRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const parseRestToSeconds = (restText?: string) => {
     if (!restText) return 90;
     const match = restText.match(/([0-9]+)/);
@@ -131,6 +134,20 @@ export default function SessionDetail() {
   const resetRestTimer = () => {
     setRestRunning(false);
     setRestSeconds(0);
+  };
+  const scrollToNextSet = () => {
+    for (const ex of session.exercises) {
+      const state = exerciseState[ex.id];
+      if (!state) continue;
+      const idx = state.sets.findIndex((s) => !s.completed);
+      if (idx !== -1) {
+        const target = document.getElementById(`exercise-${ex.id}`);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return;
+      }
+    }
   };
   const progress = useMemo(() => {
     const totals = Object.values(exerciseState).reduce(
@@ -177,8 +194,20 @@ export default function SessionDetail() {
   ]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExerciseState(initialExerciseState);
-  }, [initialExerciseState]);
+    const stored = localStorage.getItem(draftKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Record<string, ExerciseState>;
+        setExerciseState(parsed);
+        setHasUnsaved(true);
+      } catch (err) {
+        console.warn('Draft inválido, removendo.', err);
+        localStorage.removeItem(draftKey);
+      }
+    }
+  }, [initialExerciseState, draftKey]);
 
   useEffect(() => {
     if (!restRunning || restSeconds <= 0) return;
@@ -205,6 +234,22 @@ export default function SessionDetail() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!Object.keys(exerciseState).length) return;
+    localStorage.setItem(draftKey, JSON.stringify(exerciseState));
+  }, [exerciseState, draftKey]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsaved && !celebrating) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsaved, celebrating]);
+
   const handleSetChange = (
     exerciseId: string,
     setIndex: number,
@@ -225,6 +270,52 @@ export default function SessionDetail() {
       ) as SetEntry[];
       return { ...prev, [exerciseId]: { ...current, sets: nextSets } };
     });
+    setHasUnsaved(true);
+  };
+
+  const adjustSetValue = (
+    exerciseId: string,
+    setIndex: number,
+    field: 'weight' | 'reps' | 'rir',
+    delta: number
+  ) => {
+    setExerciseState((prev) => {
+      const current = prev[exerciseId];
+      if (!current) return prev;
+      const nextSets = current.sets.map((s, idx) => {
+        if (idx !== setIndex) return s;
+        const nextVal = Math.max(
+          0,
+          field === 'rir'
+            ? Math.min((s[field] as number) + delta, 5)
+            : (s[field] as number) + delta
+        );
+        return { ...s, [field]: nextVal };
+      });
+      return { ...prev, [exerciseId]: { ...current, sets: nextSets } };
+    });
+    setHasUnsaved(true);
+  };
+
+  const copyPreviousSet = (exerciseId: string, setIndex: number) => {
+    setExerciseState((prev) => {
+      const current = prev[exerciseId];
+      if (!current || setIndex === 0) return prev;
+      const prevSet = current.sets[setIndex - 1];
+      if (!prevSet) return prev;
+      const nextSets = current.sets.map((s, idx) =>
+        idx === setIndex
+          ? {
+              ...s,
+              weight: prevSet.weight,
+              reps: prevSet.reps,
+              rir: prevSet.rir,
+            }
+          : s
+      );
+      return { ...prev, [exerciseId]: { ...current, sets: nextSets } };
+    });
+    setHasUnsaved(true);
   };
 
   /**
@@ -298,6 +389,7 @@ export default function SessionDetail() {
   const copyLastLog = (exerciseId: string) => {
     const last = lastLogsByExercise.get(exerciseId);
     if (!last) return;
+    setHasUnsaved(true);
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
@@ -313,6 +405,7 @@ export default function SessionDetail() {
   };
 
   const handleNotesChange = (exerciseId: string, value: string) => {
+    setHasUnsaved(true);
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
@@ -345,6 +438,8 @@ export default function SessionDetail() {
         title: 'Sessão salva',
         description: 'Bom trabalho! Progresso salvo offline.',
       });
+      localStorage.removeItem(draftKey);
+      setHasUnsaved(false);
       setCelebrating(true);
       celebrateTimeoutRef.current = window.setTimeout(() => {
         setCelebrating(false);
@@ -414,9 +509,24 @@ export default function SessionDetail() {
             Semana {activeWeek} · {weekInfo.phase}
           </div>
         </div>
-        <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
-          {weekInfo.deload ? 'Deload' : 'Semana-alvo'}
-        </Badge>
+        <div className='flex flex-wrap gap-2 items-center'>
+          <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
+            {weekInfo.deload ? 'Deload' : 'Semana-alvo'}
+          </Badge>
+          <Button
+            variant='secondary'
+            size='sm'
+            className='hidden sm:flex'
+            onClick={scrollToNextSet}
+          >
+            Ir para próxima série
+          </Button>
+          {hasUnsaved && (
+            <Badge variant='outline' className='text-xs'>
+              rascunho salvo
+            </Badge>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -468,7 +578,18 @@ export default function SessionDetail() {
           const lastLogAvailable = lastLogsByExercise.get(exercise.id);
           let cursor = 0;
           return (
-            <div key={exercise.id} className='relative pl-3'>
+            <div
+              key={exercise.id}
+              className='relative pl-3'
+              id={`exercise-${exercise.id}`}
+              ref={(el) => {
+                if (!el) {
+                  delete exerciseRefs.current[exercise.id];
+                  return;
+                }
+                exerciseRefs.current[exercise.id] = el;
+              }}
+            >
               <span
                 className='absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60'
                 aria-hidden
@@ -557,6 +678,13 @@ export default function SessionDetail() {
                       );
                       const startIndex = cursor;
                       cursor += target.targetSets;
+                      const unitLabel = target.label
+                        ?.toLowerCase()
+                        .includes('segundo')
+                        ? 'segundos'
+                        : 'repetições';
+                      const unitLabelDisplay =
+                        unitLabel === 'segundos' ? 'Segundos' : 'Repetições';
                       return (
                         <div
                           key={targetIdx}
@@ -565,7 +693,7 @@ export default function SessionDetail() {
                           <div className='mb-2 flex items-center justify-between text-sm font-semibold text-foreground'>
                             <div>
                               {target.label ?? 'Séries'} · {target.repRange[0]}–
-                              {target.repRange[1]} repetições
+                              {target.repRange[1]} {unitLabel}
                             </div>
                             <div className='text-xs text-foreground/70'>
                               Séries {startIndex + 1}–
@@ -607,15 +735,65 @@ export default function SessionDetail() {
                                         );
                                       }}
                                     />
+                                    <div className='mt-1 flex gap-1 text-[11px]'>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2'
+                                        onClick={() =>
+                                          adjustSetValue(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'weight',
+                                            -2.5
+                                          )
+                                        }
+                                      >
+                                        -2.5
+                                      </Button>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2'
+                                        onClick={() =>
+                                          adjustSetValue(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'weight',
+                                            2.5
+                                          )
+                                        }
+                                      >
+                                        +2.5
+                                      </Button>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2'
+                                        onClick={() =>
+                                          adjustSetValue(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'weight',
+                                            5
+                                          )
+                                        }
+                                      >
+                                        +5
+                                      </Button>
+                                    </div>
                                   </div>
                                   <div className='col-span-2 sm:col-span-2'>
                                     <Label className='text-[11px]'>
-                                      Repetições
+                                      {unitLabelDisplay}
                                     </Label>
                                     <Input
                                       aria-label={`${exercise.name} série ${
                                         absoluteIndex + 1
-                                      } repetições`}
+                                      } ${unitLabel}`}
                                       type='text'
                                       inputMode='numeric'
                                       value={set.reps}
@@ -634,38 +812,66 @@ export default function SessionDetail() {
                                         );
                                       }}
                                     />
+                                    <div className='mt-1 flex gap-1 text-[11px]'>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2'
+                                        onClick={() =>
+                                          adjustSetValue(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'reps',
+                                            -1
+                                          )
+                                        }
+                                      >
+                                        -1
+                                      </Button>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2'
+                                        onClick={() =>
+                                          adjustSetValue(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'reps',
+                                            1
+                                          )
+                                        }
+                                      >
+                                        +1
+                                      </Button>
+                                    </div>
                                   </div>
                                   <div className='col-span-2 sm:col-span-2'>
                                     <Label className='text-[11px]'>RIR</Label>
-                                    <Input
-                                      aria-label={`${exercise.name} série ${
-                                        absoluteIndex + 1
-                                      } RIR`}
-                                      type='text'
-                                      inputMode='numeric'
-                                      value={set.rir}
-                                      onChange={(e) => {
-                                        const validated = validateNumericInput(
-                                          e.target.value,
-                                          false
-                                        );
-                                        const numValue =
-                                          validated === ''
-                                            ? 0
-                                            : Number(validated);
-                                        // Clamp value between 0 and 5
-                                        const clampedValue = Math.min(
-                                          Math.max(numValue, 0),
-                                          5
-                                        );
-                                        handleSetChange(
-                                          exercise.id,
-                                          absoluteIndex,
-                                          'rir',
-                                          clampedValue
-                                        );
-                                      }}
-                                    />
+                                    <div className='flex items-center gap-2'>
+                                      <input
+                                        aria-label={`${exercise.name} série ${
+                                          absoluteIndex + 1
+                                        } RIR`}
+                                        type='range'
+                                        min={0}
+                                        max={5}
+                                        step={1}
+                                        value={set.rir}
+                                        onChange={(e) =>
+                                          handleSetChange(
+                                            exercise.id,
+                                            absoluteIndex,
+                                            'rir',
+                                            Number(e.target.value)
+                                          )
+                                        }
+                                      />
+                                      <span className='text-xs font-semibold w-6 text-center'>
+                                        {set.rir}
+                                      </span>
+                                    </div>
                                   </div>
                                   <div className='col-span-2 sm:col-span-2 flex items-center gap-2'>
                                     <Button
@@ -693,6 +899,22 @@ export default function SessionDetail() {
                                     >
                                       {set.completed ? 'Feito' : 'Marcar feito'}
                                     </Button>
+                                    {absoluteIndex > 0 && (
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='sm'
+                                        className='px-2 text-xs'
+                                        onClick={() =>
+                                          copyPreviousSet(
+                                            exercise.id,
+                                            absoluteIndex
+                                          )
+                                        }
+                                      >
+                                        Copiar anterior
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -731,7 +953,7 @@ export default function SessionDetail() {
         })}
       </div>
 
-      <div className='sticky bottom-5 z-10'>
+      <div className='sticky bottom-0 z-10'>
         <Card className='border-neutral/60 bg-surface/90 backdrop-blur'>
           <CardContent className='flex flex-wrap items-center gap-3'>
             <div className='flex min-w-[200px] flex-1 flex-col gap-1'>
@@ -760,6 +982,20 @@ export default function SessionDetail() {
                   ? formatRestClock(restSeconds)
                   : 'Iniciar descanso'}
               </Button>
+              <div className='flex items-center gap-1'>
+                {[60, 90, 120].map((preset) => (
+                  <Button
+                    key={preset}
+                    variant='ghost'
+                    size='sm'
+                    className='px-2 text-xs'
+                    onClick={() => startRestTimer(String(preset / 60))}
+                    aria-label={`Iniciar ${preset} segundos de descanso`}
+                  >
+                    {preset / 60}m
+                  </Button>
+                ))}
+              </div>
               <Button
                 variant='ghost'
                 size='sm'
