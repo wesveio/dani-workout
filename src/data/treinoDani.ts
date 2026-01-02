@@ -97,11 +97,11 @@ const lowerA: SessionTemplate = {
     },
     {
       id: 'hip-thrust',
-      name: 'Elevação de quadril com barra — pausa 1s no topo',
+      name: 'Elevação Pélvica com barra — pausa 1s no topo',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2 (travar suave no topo)',
-      videoUrl: 'https://www.youtube.com/results?search_query=hip+thrust+tutorial+gluteo',
+      videoUrl: 'https://www.youtube.com/results?search_query=eleva%C3%A7%C3%A3o+p%C3%A9lvica+com+barra+tutorial',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 4, repRange: [8, 12] }] },
       ],
@@ -244,7 +244,7 @@ const upperB: SessionTemplate = {
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 4, repRange: [8, 12] }] },
       ],
-      notes: 'Cada lado; mantenha costelas baixas',
+      notes: 'Cada lado; Deprima o ombro e mantenha costelas baixas',
     },
     {
       id: 'shoulder-press',
@@ -295,7 +295,7 @@ const upperB: SessionTemplate = {
     },
     {
       id: 'cable-kickback',
-      name: 'Elevação de glúteo no cabo',
+      name: 'Kickback de glúteo no cabo',
       focus: 'pump',
       rest: '60s',
       rir: 'Última série RIR 0–1',
@@ -388,14 +388,14 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'leg-press',
-      name: 'Pressão de Pernas (pés altos/largos)',
+      name: 'Leg Press (pés altos/largos)',
       focus: 'compound',
       rest: '2–3 min',
       rir: 'RIR 1–2',
-      videoUrl: 'https://www.youtube.com/results?search_query=leg+press+p%C3%A9s+altos+lateral',
       prescriptions: [
         { weekRange: [1, 12], targets: [{ sets: 3, repRange: [10, 15] }] },
       ],
+      videoUrl: 'https://www.youtube.com/results?search_query=leg+press+p%C3%A9s+altos+lateral',
     },
     {
       id: 'smith-lunge',
@@ -410,11 +410,11 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'glute-bridge-machine',
-      name: 'Ponte de Glúteo máquina / puxada frontal',
+      name: 'Elevação Pélvica máquina',
       focus: 'pump',
       rest: '90s',
       rir: 'Última série RIR 0–1',
-      videoUrl: 'https://www.youtube.com/results?search_query=glute+bridge+m%C3%A1quina+tutorial',
+      videoUrl: 'https://www.youtube.com/results?search_query=eleva%C3%A7%C3%A3o+p%C3%A9lvica+m%C3%A1quina+tutorial',
       prescriptions: [
         {
           weekRange: [1, 12],
@@ -446,11 +446,11 @@ const lowerC: SessionTemplate = {
     },
     {
       id: 'core-reverse-crunch',
-      name: 'Crunch reverso no banco',
+      name: 'Abdominal Reverso no banco',
       focus: 'isolation',
       rest: '60s',
       rir: 'Controlado, sem impulso',
-      videoUrl: 'https://www.youtube.com/results?search_query=crunch+reverso+banco+abdominal+tutorial',
+      videoUrl: 'https://www.youtube.com/results?search_query=abdominal+reverso+no+banco+tutorial',
       prescriptions: [{ weekRange: [1, 12], targets: [{ sets: 3, repRange: [10, 15] }] }],
     },
     {
@@ -540,7 +540,7 @@ export const treinoDani: Program = {
       '5 min leve (bike/esteira)',
       'Mobilidade rápida: quadril/tornozelo/torácica + 10 agachamentos corpo livre',
       'Ativação (2x): abdução 15–20 reps',
-      'Ativação (2x): ponte de glúteo 12–15 reps com 1s de pausa no topo',
+      'Ativação (2x): elevação pélvica 12–15 reps com 1s de pausa no topo',
     ],
   },
   deload: {
