@@ -1,8 +1,9 @@
 import type { DeloadRule, Phase, Program, ScheduleDay, SessionTemplate, Warmup, Week } from './programTypes'
 
 const imageBase = '/thumbs'
-const defaultImageSlug = 'deadlift'
+const defaultImageSlug = ''
 const imageSlugById: Record<string, string> = {
+  'incline-press': 'incline-dumbbell-press',
   'weighted-pullup': 'pull-ups',
   'seated-row-heavy': 'seated-machine-row',
   'overhead-press': 'dumbbell-shoulder-press',
@@ -10,7 +11,7 @@ const imageSlugById: Record<string, string> = {
   'barbell-curl': 'barbell-curls',
   'triceps-pushdown': 'cable-tricep-pushdowns',
   'core-cable-crunch-wes': 'cable-crunch',
-  'farmers-carry': 'deadlift',
+  'farmers-carry': 'farmers-walk',
   'core-pallof-wes': 'standing-abdominal-twist',
   'back-squat': 'hack-squat',
   'romanian-deadlift': 'romanian-deadlift',
