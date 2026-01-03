@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { BarChart3, ChevronRight } from 'lucide-react'
-import { treinoDani } from '@/data/treinoDani'
 import { focusLabels } from '@/lib/program'
+import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-const exercises = treinoDani.sessions.flatMap((s) => s.exercises)
-
 export default function Progress() {
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
+  const program = useActiveProgram()
+  const exercises = program.sessions.flatMap((s) => s.exercises)
 
   return (
     <div className="space-y-4">

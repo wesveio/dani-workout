@@ -5,9 +5,10 @@ import {
   Dumbbell,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { treinoDani } from '@/data/treinoDani';
+import { userList } from '@/data/users';
 import { getCurrentWeekNumber } from '@/lib/date';
 import { cn } from '@/lib/utils';
+import { useActiveProgram, useActiveUserProfile } from '@/lib/user';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { useWorkoutStore } from '@/store/workoutStore';
@@ -22,13 +23,19 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const profile = useActiveUserProfile();
+  const program = useActiveProgram();
   const settings = useWorkoutStore((s) => s.settings);
+  const activeUserId = useWorkoutStore((s) => s.activeUserId);
+  const switchUser = useWorkoutStore((s) => s.switchUser);
+  const loading = useWorkoutStore((s) => s.loading);
   const weekNumber = getCurrentWeekNumber(
     settings.programStart,
-    treinoDani.durationWeeks
+    program.durationWeeks
   );
-  const weekInfo = treinoDani.weeks.find((w) => w.number === weekNumber);
+  const weekInfo = program.weeks.find((w) => w.number === weekNumber);
   const isSession = location.pathname.startsWith('/session');
+  const scheduleLabel = program.schedule.map((day) => day.day.slice(0, 3)).join(' / ');
 
   return (
     <div className='min-h-screen bg-background text-foreground'>
@@ -46,8 +53,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className='flex items-center gap-3'>
-            <div className='h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40'>
-              D
+            <div className='relative'>
+              <div className='h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40 cursor-pointer'>
+                {profile.avatarInitial}
+              </div>
+              <select
+                className='absolute inset-0 h-full w-full opacity-0 cursor-pointer'
+                value={activeUserId}
+                onChange={(e) => {
+                  const next = e.target.value as typeof activeUserId;
+                  if (next !== activeUserId) {
+                    switchUser(next);
+                  }
+                }}
+                disabled={loading}
+                aria-label='Selecionar usuário'
+              >
+                {userList.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.shortName}
+                  </option>
+                ))}
+              </select>
+              <span className='sr-only'>Trocar usuário</span>
             </div>
             {isSession ? (
               <div className='leading-tight'>
@@ -63,34 +91,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
             ) : (
               <div>
                 <div className='text-xs uppercase tracking-[0.2em] text-foreground/70'>
-                  Daniela Sotilo
+                  {profile.name}
                 </div>
                 <div className='text-lg font-semibold leading-tight text-foreground'>
-                  Guia de treino de 12 semanas
+                  {program.name}
                 </div>
                 <div className='text-xs text-foreground/70'>
-                  Divisão Seg/Qua/Sex
+                  {scheduleLabel}
                 </div>
               </div>
             )}
           </div>
-          {!isSession && (
+          <div className='flex items-center gap-2'>
             <div className='hidden items-center gap-2 md:flex'>
-              {weekInfo && (
+              {!isSession && weekInfo && (
                 <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
                   Semana {weekNumber}:{' '}
                   {weekInfo.deload ? 'Deload' : weekInfo.phase}
                 </Badge>
               )}
-              <Button
-                variant='secondary'
-                size='sm'
-                onClick={() => navigate('/week')}
-              >
-                Ver semana
-              </Button>
+              {!isSession && (
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={() => navigate('/week')}
+                >
+                  Ver semana
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </header>
       <main

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Check, Clock4, Dumbbell } from 'lucide-react';
-import { treinoDani } from '@/data/treinoDani';
-import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date';
+import { getCurrentWeekNumber } from '@/lib/date';
 import { getSessionTemplate } from '@/lib/program';
+import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -18,18 +18,19 @@ import {
 
 export default function WeekView() {
   const settings = useWorkoutStore((s) => s.settings);
+  const program = useActiveProgram();
   const workouts = useWorkoutStore((s) => s.workouts);
   const [week, setWeek] = useState(
-    getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks)
+    getCurrentWeekNumber(settings.programStart, program.durationWeeks)
   );
   const currentWeek = getCurrentWeekNumber(
     settings.programStart,
-    treinoDani.durationWeeks
+    program.durationWeeks
   );
   const weekInfo = useMemo(
     () =>
-      treinoDani.weeks.find((w) => w.number === week) ?? treinoDani.weeks[0],
-    [week]
+      program.weeks.find((w) => w.number === week) ?? program.weeks[0],
+    [week, program]
   );
 
   useEffect(() => {
@@ -48,16 +49,16 @@ export default function WeekView() {
             </Badge>
           </div>
           <CardDescription>{weekInfo.emphasis}</CardDescription>
-          {isDeloadWeek(week) && (
+          {program.deload.weeks.includes(week) && (
             <div className='flex items-center gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-3 py-2 text-sm text-foreground/90 shadow-inner shadow-neutral/20'>
               <Clock4 className='h-4 w-4' />
-              {treinoDani.deload.guidance}
+              {program.deload.guidance}
             </div>
           )}
         </CardHeader>
         <CardContent className='space-y-3'>
           <div className='flex gap-2 overflow-x-auto pb-1 no-scrollbar'>
-            {Array.from({ length: treinoDani.durationWeeks }).map((_, idx) => {
+            {Array.from({ length: program.durationWeeks }).map((_, idx) => {
               const num = idx + 1;
               const active = num === week;
               const isCurrent = num === currentWeek;
@@ -65,7 +66,7 @@ export default function WeekView() {
                 (w) => w.weekNumber === num
               ).length;
               const weekCompleted =
-                completedCount >= treinoDani.schedule.length;
+                completedCount >= program.schedule.length;
               return (
                 <Button
                   key={num}
@@ -107,8 +108,8 @@ export default function WeekView() {
             })}
           </div>
           <div className='flex flex-col gap-3'>
-            {treinoDani.schedule.map((day) => {
-              const session = getSessionTemplate(day.sessionId);
+            {program.schedule.map((day) => {
+              const session = getSessionTemplate(program, day.sessionId);
               return (
                 <Link
                   key={day.day}
@@ -138,7 +139,7 @@ export default function WeekView() {
           <CardDescription>Entenda o foco de cada bloco.</CardDescription>
         </CardHeader>
         <CardContent className='space-y-3'>
-          {treinoDani.phases.map((phase) => (
+          {program.phases.map((phase) => (
             <div
               key={phase.label + phase.weeks.join('-')}
               className='flex items-start gap-3 rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft'

@@ -1,5 +1,4 @@
-import type { Exercise, SessionTemplate } from '@/data/treinoDani'
-import { treinoDani, type SetTarget } from '@/data/treinoDani'
+import type { Exercise, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
 import type { SessionType } from '@/types'
 
 export type ComputedTarget = SetTarget & { targetSets: number }
@@ -10,19 +9,19 @@ export const focusLabels: Record<Exercise['focus'], string> = {
   pump: 'Pump',
 }
 
-export const getSessionTemplate = (sessionId: SessionType): SessionTemplate => {
-  const found = treinoDani.sessions.find((s) => s.id === sessionId)
+export const getSessionTemplate = (program: Program, sessionId: SessionType): SessionTemplate => {
+  const found = program.sessions.find((s) => s.id === sessionId)
   if (!found) {
     throw new Error(`Session ${sessionId} not found`)
   }
   return found
 }
 
-export const getWeekInfo = (weekNumber: number) =>
-  treinoDani.weeks.find((w) => w.number === weekNumber) ?? treinoDani.weeks[0]
+export const getWeekInfo = (program: Program, weekNumber: number) =>
+  program.weeks.find((w) => w.number === weekNumber) ?? program.weeks[0]
 
-export const findExerciseById = (id: string): Exercise | undefined => {
-  for (const session of treinoDani.sessions) {
+export const findExerciseById = (program: Program, id: string): Exercise | undefined => {
+  for (const session of program.sessions) {
     const found = session.exercises.find((e) => e.id === id)
     if (found) return found
   }

@@ -4,6 +4,7 @@ import { ArrowLeft, PlayCircle, Trophy, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Formatter, NameType } from 'recharts/types/component/DefaultTooltipContent'
 import { findExerciseById, focusLabels } from '@/lib/program'
+import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,8 @@ export default function ExerciseHistory() {
   const { exerciseId } = useParams()
   const navigate = useNavigate()
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
-  const exercise = exerciseId ? findExerciseById(exerciseId) : undefined
+  const program = useActiveProgram()
+  const exercise = exerciseId ? findExerciseById(program, exerciseId) : undefined
 
   if (!exercise) {
     return (

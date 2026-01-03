@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Timer,
 } from 'lucide-react';
-import { treinoDani } from '@/data/treinoDani';
 import {
   computeTargetsForWeek,
   focusLabels,
@@ -18,7 +17,8 @@ import {
   getWeekInfo,
 } from '@/lib/program';
 import { cn } from '@/lib/utils';
-import { getCurrentWeekNumber, isDeloadWeek } from '@/lib/date';
+import { getCurrentWeekNumber } from '@/lib/date';
+import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
 import type { ExerciseLog, SetEntry, SessionType } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -85,9 +85,11 @@ const createDefaultSets = (
 export default function SessionDetail() {
   const { sessionId, weekNumber: weekParam } = useParams();
   const sessionType = (sessionId ?? 'A') as SessionType;
+  const program = useActiveProgram();
   const settings = useWorkoutStore((s) => s.settings);
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs);
   const logSession = useWorkoutStore((s) => s.logSession);
+  const activeUserId = useWorkoutStore((s) => s.activeUserId);
   const navigate = useNavigate();
 
   const [exerciseState, setExerciseState] = useState<
@@ -99,9 +101,9 @@ export default function SessionDetail() {
   const [celebrating, setCelebrating] = useState(false);
   const activeWeek =
     Number(weekParam) ||
-    getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks);
-  const session = getSessionTemplate(sessionType);
-  const weekInfo = getWeekInfo(activeWeek);
+    getCurrentWeekNumber(settings.programStart, program.durationWeeks);
+  const session = getSessionTemplate(program, sessionType);
+  const weekInfo = getWeekInfo(program, activeWeek);
   const lastLogsByExercise = useMemo(() => {
     const map = new Map<string, ExerciseLog>();
     exerciseLogs.forEach((log) => {
@@ -113,7 +115,7 @@ export default function SessionDetail() {
   }, [exerciseLogs]);
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
-  const draftKey = `session-draft-${sessionType}-${activeWeek}`;
+  const draftKey = `session-draft-${activeUserId}-${sessionType}-${activeWeek}`;
   const exerciseRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const parseRestToSeconds = (restText?: string) => {
     if (!restText) return 90;
@@ -421,7 +423,7 @@ export default function SessionDetail() {
           date: workoutDate,
           weekNumber: activeWeek,
           sessionType,
-          deload: isDeloadWeek(activeWeek),
+          deload: program.deload.weeks.includes(activeWeek),
         },
         exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
           exerciseId,
@@ -534,7 +536,7 @@ export default function SessionDetail() {
           <div>
             <CardTitle>Aqueça primeiro</CardTitle>
             <CardDescription className='text-foreground/80'>
-              {treinoDani.warmup.duration}
+              {program.warmup.duration}
             </CardDescription>
           </div>
           <Badge variant='outline'>Essencial</Badge>
@@ -546,7 +548,7 @@ export default function SessionDetail() {
               <Plus className='h-4 w-4' />
             </CollapsibleTrigger>
             <CollapsibleContent className='mt-3 space-y-2 rounded-xl border border-neutral/40 bg-surface px-4 py-3 text-sm text-foreground/90'>
-              {treinoDani.warmup.items.map((item) => (
+              {program.warmup.items.map((item) => (
                 <div key={item} className='flex items-start gap-2'>
                   <div className='mt-1 h-2 w-2 rounded-full bg-foreground' />
                   <span>{item}</span>
@@ -554,12 +556,12 @@ export default function SessionDetail() {
               ))}
             </CollapsibleContent>
           </Collapsible>
-          {isDeloadWeek(activeWeek) && (
+          {program.deload.weeks.includes(activeWeek) && (
             <div className='mt-3 flex items-start gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20'>
               <AlertCircle className='mt-0.5 h-4 w-4 text-foreground' />
               <span>
-                Dica de deload: {treinoDani.deload.guidance} (
-                {treinoDani.deload.reductionNote})
+                Dica de deload: {program.deload.guidance} (
+                {program.deload.reductionNote})
               </span>
             </div>
           )}

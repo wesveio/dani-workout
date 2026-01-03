@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { AlertTriangle, ArrowRight, Flame, PlayCircle } from 'lucide-react'
-import { treinoDani } from '@/data/treinoDani'
-import { getSessionForDate, getCurrentWeekNumber, isDeloadWeek } from '@/lib/date'
+import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
 import { getSessionTemplate, getWeekInfo } from '@/lib/program'
+import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,13 +37,14 @@ const legend = [
 export default function Dashboard() {
   const workouts = useWorkoutStore((s) => s.workouts)
   const settings = useWorkoutStore((s) => s.settings)
-  const weekNumber = getCurrentWeekNumber(settings.programStart, treinoDani.durationWeeks)
-  const weekInfo = getWeekInfo(weekNumber)
+  const program = useActiveProgram()
+  const weekNumber = getCurrentWeekNumber(settings.programStart, program.durationWeeks)
+  const weekInfo = getWeekInfo(program, weekNumber)
   const today = dayjs()
-  const todaySession = getSessionForDate(today, treinoDani.schedule)
-  const sessionTemplate = getSessionTemplate(todaySession.sessionId)
+  const todaySession = getSessionForDate(today, program.schedule)
+  const sessionTemplate = getSessionTemplate(program, todaySession.sessionId)
   const isRestDay = todaySession.next
-  const expectedSessions = Math.min(weekNumber, treinoDani.durationWeeks) * 3
+  const expectedSessions = Math.min(weekNumber, program.durationWeeks) * program.schedule.length
   const adherence = Math.min(100, Math.round((workouts.length / expectedSessions) * 100))
   const recent = workouts.slice(0, 3)
   const ctaPrimary = isRestDay
@@ -68,7 +69,7 @@ export default function Dashboard() {
               <CardTitle className="text-2xl font-bold">
                 {isRestDay ? 'Recupere hoje' : today.format('dddd, D [de] MMM')}
               </CardTitle>
-              {isDeloadWeek(weekNumber) && (
+              {program.deload.weeks.includes(weekNumber) && (
                 <span className="flex items-center gap-2 rounded-full bg-neutral/60 px-3 py-1 text-xs font-semibold text-foreground">
                   <AlertTriangle className="h-4 w-4 text-accent" />
                   Deload
@@ -80,7 +81,7 @@ export default function Dashboard() {
             </CardDescription>
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">{weekInfo.emphasis}</Badge>
-              <Badge variant="outline">{treinoDani.warmup.duration} aquecimento</Badge>
+              <Badge variant="outline">{program.warmup.duration} aquecimento</Badge>
               <Badge variant="outline">
                 {sessionTemplate.exercises.length} exercícios · {sessionTemplate.exercises[0].rest} descanso
               </Badge>
@@ -127,7 +128,7 @@ export default function Dashboard() {
             <CardDescription>Lembretes rápidos para treinar.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-foreground/90">
-            {treinoDani.rules.map((rule) => (
+            {program.rules.map((rule) => (
               <div key={rule} className="flex gap-2">
                 <Flame className="mt-0.5 h-4 w-4 text-accent" />
                 <span>{rule}</span>
@@ -139,10 +140,10 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Agenda semanal</CardTitle>
-            <CardDescription>Sessões Seg/Qua/Sex</CardDescription>
+            <CardDescription>{program.schedule.map((day) => formatDay(day.day)).join(' / ')}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {treinoDani.schedule.map((day) => (
+            {program.schedule.map((day) => (
               <Link
                 key={day.day}
                 to={`/session/${day.sessionId}/${weekNumber}`}
@@ -156,7 +157,7 @@ export default function Dashboard() {
                   Sessão {day.sessionId}
                 </div>
                 <div className="text-xs text-muted">
-                  {getSessionTemplate(day.sessionId).subtitle}
+                  {getSessionTemplate(program, day.sessionId).subtitle}
                 </div>
               </Link>
             ))}
@@ -211,20 +212,20 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Aquecimento (antes de cada sessão)</CardTitle>
-          <CardDescription>{treinoDani.warmup.duration}</CardDescription>
+          <CardDescription>{program.warmup.duration}</CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm text-foreground/90">
-            {treinoDani.warmup.items.map((item) => (
+            {program.warmup.items.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <div className="mt-1 h-2 w-2 rounded-full bg-foreground" />
                 <span>{item}</span>
               </li>
             ))}
           </ul>
-          {isDeloadWeek(weekNumber) && (
+          {program.deload.weeks.includes(weekNumber) && (
             <div className="mt-4 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20">
-              <strong>Lembrete de deload:</strong> {treinoDani.deload.guidance}
+              <strong>Lembrete de deload:</strong> {program.deload.guidance}
             </div>
           )}
         </CardContent>

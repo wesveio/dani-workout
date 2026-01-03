@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { Download, RefreshCw, ShieldCheck, Upload } from 'lucide-react'
 import { useWorkoutStore } from '@/store/workoutStore'
+import { useActiveUserProfile } from '@/lib/user'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -11,6 +12,7 @@ import { toast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function Settings() {
+  const profile = useActiveUserProfile()
   const settings = useWorkoutStore((s) => s.settings)
   const saveSettings = useWorkoutStore((s) => s.saveSettings)
   const exportData = useWorkoutStore((s) => s.exportData)
@@ -25,10 +27,10 @@ export default function Settings() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `dani-training-export-${dayjs().format('YYYYMMDD-HHmm')}.json`
+    link.download = `training-export-${bundle.userId}-${dayjs().format('YYYYMMDD-HHmm')}.json`
     link.click()
     URL.revokeObjectURL(url)
-    toast({ title: 'Exportado', description: 'JSON pronto. Guarde com cuidado.' })
+    toast({ title: 'Exportado', description: `JSON do ${profile.shortName} pronto. Guarde com cuidado.` })
   }
 
   const onImport = async (file?: File) => {
@@ -48,7 +50,7 @@ export default function Settings() {
 
   const onReset = async () => {
     await reset()
-    toast({ title: 'Dados apagados', description: 'Recomece do zero. Configurações preservadas.' })
+    toast({ title: 'Dados apagados', description: `Registros de ${profile.shortName} removidos. Configurações preservadas.` })
     setOpenReset(false)
   }
 
@@ -57,19 +59,19 @@ export default function Settings() {
       <div>
         <div className="text-xs uppercase tracking-[0.2em] text-muted">Configurações</div>
         <h1 className="text-2xl font-bold">Dados & recuperação</h1>
-        <p className="text-sm text-foreground/80">Foco no offline. Importação/exportação em JSON.</p>
+        <p className="text-sm text-foreground/80">Foco no offline. Importação/exportação em JSON para {profile.shortName}.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Opções de volume</CardTitle>
-          <CardDescription>Ligue o +1 série opcional quando estiver recuperada.</CardDescription>
+          <CardDescription>Ative o +1 série opcional se sua recuperação estiver ótima.</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-between rounded-xl border border-neutral/50 bg-surface px-4 py-3">
           <div>
             <div className="text-sm font-semibold">Recuperação está excelente</div>
             <div className="text-xs text-foreground/70">
-              Adiciona +1 série de Hip Thrust (A) e Mesa Flexora (C) nas semanas 5–7 e 9–12.
+              Só afeta exercícios que têm volume bônus no plano ativo.
             </div>
           </div>
           <Switch
@@ -143,7 +145,7 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <CardTitle>Resetar dados</CardTitle>
-            <CardDescription>Apaga todos os registros. Configurações ficam.</CardDescription>
+            <CardDescription>Apaga registros do usuário atual. Configurações ficam.</CardDescription>
           </CardHeader>
           <CardContent>
             <Dialog open={openReset} onOpenChange={setOpenReset}>
@@ -155,9 +157,9 @@ export default function Settings() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Apagar todos os registros?</DialogTitle>
+                  <DialogTitle>Apagar registros deste usuário?</DialogTitle>
                   <DialogDescription>
-                    Isso remove todos os treinos e exercícios armazenados offline. Não é possível desfazer
+                    Isso remove todos os treinos e exercícios armazenados offline para este perfil. Não é possível desfazer
                     esta ação.
                   </DialogDescription>
                 </DialogHeader>

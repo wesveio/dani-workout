@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
-import type { ScheduleDay } from '@/data/treinoDani'
+import type { ScheduleDay } from '@/data/programTypes'
 import type { SessionType } from '@/types'
 
 dayjs.locale('pt-br')

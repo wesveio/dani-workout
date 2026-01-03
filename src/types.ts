@@ -1,3 +1,4 @@
+export type UserId = 'dani' | 'wesley'
 export type SessionType = 'A' | 'B' | 'C'
 
 export type SetEntry = {
@@ -14,6 +15,7 @@ export type WorkoutLog = {
   sessionType: SessionType
   deload: boolean
   notes?: string
+  userId: UserId
 }
 
 export type ExerciseLog = {
@@ -25,6 +27,7 @@ export type ExerciseLog = {
   date: string
   weekNumber: number
   sessionType: SessionType
+  userId: UserId
 }
 
 export type SettingsState = {
@@ -33,6 +36,7 @@ export type SettingsState = {
 }
 
 export type ExportBundle = {
+  userId: UserId
   workouts: WorkoutLog[]
   exerciseLogs: ExerciseLog[]
   settings: SettingsState
