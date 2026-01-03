@@ -1,15 +1,46 @@
 import type { Program, SessionTemplate, Week } from './programTypes'
 
-const defaultExerciseImage = 'https://training.fit/wp-content/uploads/2020/02/latzug.png'
-const imageUrlFor = (id: string) => `${defaultExerciseImage}?exercise=${id}`
+const imageBase = '/thumbs'
+const defaultImageSlug = 'deadlift'
+const imageSlugById: Record<string, string> = {
+  'hip-thrust': 'dumbbell-deadlift',
+  'bulgarian-split-squat': 'barbell-lunges',
+  'leg-extension': 'leg-extensions',
+  'hip-abduction': 'hip-adduction',
+  'standing-calf-raise': 'standing-calf-raise',
+  'core-rkc-plank': 'push-ups',
+  'core-dead-bug': 'abdominal-crunch',
+  'core-pallof': 'standing-abdominal-twist',
+  'one-arm-row': 'single-arm-dumbbell-row',
+  'shoulder-press': 'dumbbell-shoulder-press',
+  'lateral-raise': 'lateral-raise',
+  'rope-pushdown': 'cable-tricep-pushdowns',
+  'alternating-curl': 'hammer-curls',
+  'cable-kickback': 'kickbacks',
+  'hip-abduction-b': 'hip-adduction',
+  'core-cable-crunch': 'cable-crunch',
+  'core-side-plank': 'side-bends',
+  'core-farmers-carry': 'deadlift',
+  'lying-leg-curl': 'lying-leg-curl',
+  'leg-press': 'seated-leg-press',
+  'smith-lunge': 'barbell-lunges',
+  'glute-bridge-machine': 'dumbbell-deadlift',
+  'seated-calf-raise': 'seated-machine-calf-raises',
+  'core-hanging-knee-raise': 'hanging-knee-raise',
+  'core-reverse-crunch': 'reverse-crunches',
+  'core-back-extension': 'back-extension',
+}
 
 const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
   sessions.map((session) => ({
     ...session,
-    exercises: session.exercises.map((exercise) => ({
-      ...exercise,
-      imageUrl: exercise.imageUrl ?? imageUrlFor(exercise.id),
-    })),
+    exercises: session.exercises.map((exercise) => {
+      const slug = imageSlugById[exercise.id] ?? defaultImageSlug
+      return {
+        ...exercise,
+        imageUrl: `${imageBase}/${slug}.png`,
+      }
+    }),
   }))
 
 const lowerA: SessionTemplate = {

@@ -652,14 +652,24 @@ export default function SessionDetail() {
                         Usar último treino
                       </Button>
                     )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className='space-y-3'>
-                  <div className='flex flex-wrap gap-2 text-xs'>
-                    {targets.map((t, idx) => (
-                      <Badge key={idx} variant='outline'>
-                        {t.label ? `${t.label}: ` : ''}
-                        {formatTargetText(t)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-3'>
+              {exercise.imageUrl && (
+                <div className='overflow-hidden rounded-xl border border-neutral/40 bg-neutral/70 shadow-soft'>
+                  <img
+                    src={exercise.imageUrl}
+                    alt={`Execução de ${exercise.name}`}
+                    className='h-40 w-full object-cover'
+                    loading='lazy'
+                  />
+                </div>
+              )}
+              <div className='flex flex-wrap gap-2 text-xs'>
+                {targets.map((t, idx) => (
+                  <Badge key={idx} variant='outline'>
+                    {t.label ? `${t.label}: ` : ''}
+                    {formatTargetText(t)}
                         {exercise.optionalVolumeBump &&
                           exercise.optionalVolumeBump.weeks.includes(
                             activeWeek

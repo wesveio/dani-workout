@@ -1,15 +1,47 @@
 import type { DeloadRule, Phase, Program, ScheduleDay, SessionTemplate, Warmup, Week } from './programTypes'
 
-const defaultExerciseImage = 'https://training.fit/wp-content/uploads/2020/02/latzug.png'
-const imageUrlFor = (id: string) => `${defaultExerciseImage}?exercise=${id}`
+const imageBase = '/thumbs'
+const defaultImageSlug = 'deadlift'
+const imageSlugById: Record<string, string> = {
+  'weighted-pullup': 'pull-ups',
+  'seated-row-heavy': 'seated-machine-row',
+  'overhead-press': 'dumbbell-shoulder-press',
+  'lateral-raise': 'lateral-raise',
+  'barbell-curl': 'barbell-curls',
+  'triceps-pushdown': 'cable-tricep-pushdowns',
+  'core-cable-crunch-wes': 'cable-crunch',
+  'farmers-carry': 'deadlift',
+  'core-pallof-wes': 'standing-abdominal-twist',
+  'back-squat': 'hack-squat',
+  'romanian-deadlift': 'romanian-deadlift',
+  'leg-press': 'seated-leg-press',
+  'leg-curl': 'lying-leg-curl',
+  'standing-calf-raise-wes': 'standing-calf-raise',
+  'core-ab-wheel': 'ab-wheel-rollout',
+  'core-side-plank-wes': 'side-bends',
+  'core-dead-bug-wes': 'abdominal-crunch',
+  'trap-bar-deadlift': 'deadlift',
+  'bulgarian-split-squat-wes': 'barbell-lunges',
+  'chest-supported-row': 'incline-dumbell-row',
+  'machine-chest-press': 'chest-press',
+  'neutral-pull': 'cable-lat-pulldown',
+  'leg-extension-wes': 'leg-extensions',
+  'leg-curl-pump': 'lying-leg-curl',
+  'seated-calf-raise': 'seated-machine-calf-raises',
+  'core-hanging-knee-raise-wes': 'hanging-knee-raise',
+  'core-reverse-crunch-wes': 'reverse-crunches',
+}
 
 const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
   sessions.map((session) => ({
     ...session,
-    exercises: session.exercises.map((exercise) => ({
-      ...exercise,
-      imageUrl: exercise.imageUrl ?? imageUrlFor(exercise.id),
-    })),
+    exercises: session.exercises.map((exercise) => {
+      const slug = imageSlugById[exercise.id] ?? defaultImageSlug
+      return {
+        ...exercise,
+        imageUrl: `${imageBase}/${slug}.png`,
+      }
+    }),
   }))
 
 const upperA: SessionTemplate = {
