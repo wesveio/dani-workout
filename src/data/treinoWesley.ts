@@ -1,5 +1,17 @@
 import type { DeloadRule, Phase, Program, ScheduleDay, SessionTemplate, Warmup, Week } from './programTypes'
 
+const defaultExerciseImage = 'https://training.fit/wp-content/uploads/2020/02/latzug.png'
+const imageUrlFor = (id: string) => `${defaultExerciseImage}?exercise=${id}`
+
+const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
+  sessions.map((session) => ({
+    ...session,
+    exercises: session.exercises.map((exercise) => ({
+      ...exercise,
+      imageUrl: exercise.imageUrl ?? imageUrlFor(exercise.id),
+    })),
+  }))
+
 const upperA: SessionTemplate = {
   id: 'A',
   title: 'Upper Strength',
@@ -555,7 +567,7 @@ export const treinoWesley: Program = {
   name: 'Treino Wesley — 60 dias',
   durationWeeks: 8,
   schedule,
-  sessions: [upperA, lowerB, fullBodyC],
+  sessions: withImages([upperA, lowerB, fullBodyC]),
   weeks,
   phases,
   warmup,

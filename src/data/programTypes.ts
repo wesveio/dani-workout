@@ -31,6 +31,7 @@ export type Exercise = {
   rir: string
   prescriptions: Prescription[]
   videoUrl?: string
+  imageUrl?: string
   optionalVolumeBump?: {
     weeks: number[]
     extraSets: number

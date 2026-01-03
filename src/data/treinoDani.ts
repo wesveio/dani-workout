@@ -1,5 +1,17 @@
 import type { Program, SessionTemplate, Week } from './programTypes'
 
+const defaultExerciseImage = 'https://training.fit/wp-content/uploads/2020/02/latzug.png'
+const imageUrlFor = (id: string) => `${defaultExerciseImage}?exercise=${id}`
+
+const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
+  sessions.map((session) => ({
+    ...session,
+    exercises: session.exercises.map((exercise) => ({
+      ...exercise,
+      imageUrl: exercise.imageUrl ?? imageUrlFor(exercise.id),
+    })),
+  }))
+
 const lowerA: SessionTemplate = {
   id: 'A',
   title: 'Treino A',
@@ -428,7 +440,7 @@ export const treinoDani: Program = {
     { day: 'Quarta-feira', sessionId: 'B' },
     { day: 'Sexta-feira', sessionId: 'C' },
   ],
-  sessions: [lowerA, upperB, lowerC],
+  sessions: withImages([lowerA, upperB, lowerC]),
   weeks,
   phases: [
     {
