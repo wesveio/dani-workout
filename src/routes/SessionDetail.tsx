@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
@@ -9,18 +9,14 @@ import {
   RefreshCw,
   Timer,
 } from 'lucide-react';
-import {
-  computeTargetsForWeek,
-  focusLabels,
-  formatTargetText,
-  getSessionTemplate,
-  getWeekInfo,
-} from '@/lib/program';
+import { computeTargetsForWeek, focusLabels, formatTargetText, getWeekInfo } from '@/lib/program';
 import { cn } from '@/lib/utils';
 import { getCurrentWeekNumber } from '@/lib/date';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
 import type { ExerciseLog, SetEntry, SessionType } from '@/types';
+import { parseRestDuration, formatRestClock } from '@/lib/rest';
+import { useDraftAutosave } from '@/hooks/useDraftAutosave';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +41,96 @@ type ExerciseState = {
   notes: string;
 };
 
+type SessionFooterProps = {
+  progress: { total: number; completed: number; percent: number };
+  restRunning: boolean;
+  restSeconds: number;
+  defaultRestText?: string;
+  onStartRest: (restText?: string) => void;
+  onResetRest: () => void;
+  onFinish: () => void;
+  onBack: () => void;
+  formatClock: (seconds: number) => string;
+};
+
+const SessionFooter = memo(function SessionFooter({
+  progress,
+  restRunning,
+  restSeconds,
+  defaultRestText,
+  onStartRest,
+  onResetRest,
+  onFinish,
+  onBack,
+  formatClock,
+}: SessionFooterProps) {
+  return (
+    <div className='sticky bottom-0 z-10'>
+      <Card className='border-neutral/60 bg-surface/90 backdrop-blur'>
+        <CardContent className='flex flex-wrap items-center gap-3'>
+          <div className='flex min-w-[200px] flex-1 flex-col gap-1'>
+            <div className='flex items-center justify-between text-xs text-foreground/70'>
+              <span>
+                {progress.completed}/{progress.total || 0} séries
+              </span>
+              <span>{progress.percent}%</span>
+            </div>
+            <div className='h-2 w-full overflow-hidden rounded-full bg-neutral/70'>
+              <div
+                className='h-full rounded-full bg-gradient-to-r from-accent to-accentSecondary transition-all'
+                style={{ width: `${progress.percent}%` }}
+                aria-label='Progresso da sessão'
+              />
+            </div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='secondary'
+              size='sm'
+              onClick={() => onStartRest(defaultRestText)}
+            >
+              <Timer className='mr-2 h-4 w-4' />
+              {restRunning ? formatClock(restSeconds) : 'Iniciar descanso'}
+            </Button>
+            <div className='flex items-center gap-1'>
+              {[60, 90, 120].map((preset) => (
+                <Button
+                  key={preset}
+                  variant='ghost'
+                  size='sm'
+                  className='px-2 text-xs'
+                  onClick={() => onStartRest(String(preset))}
+                  aria-label={`Iniciar ${preset} segundos de descanso`}
+                >
+                  {preset / 60}m
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={onResetRest}
+              disabled={!restSeconds}
+            >
+              Limpar
+            </Button>
+          </div>
+          <div className='flex flex-wrap gap-2'>
+            <Button onClick={onFinish} size='lg'>
+              <Check className='mr-2 h-5 w-5' />
+              Finalizar sessão
+            </Button>
+            <Button variant='secondary' onClick={onBack}>
+              <Timer className='mr-2 h-4 w-4' />
+              Voltar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+});
+
 const sparkPositions = [
   { left: 10, top: 18 },
   { left: 22, top: 32 },
@@ -61,6 +147,9 @@ const sparkPositions = [
   { left: 28, top: 86 },
   { left: 64, top: 90 },
 ];
+
+const unsavedMessage =
+  'Você tem alterações não salvas. Deseja descartar e sair da sessão?';
 
 const createDefaultSets = (
   total: number,
@@ -84,7 +173,12 @@ const createDefaultSets = (
 
 export default function SessionDetail() {
   const { sessionId, weekNumber: weekParam } = useParams();
-  const sessionType = (sessionId ?? 'A') as SessionType;
+  const sessionType =
+    sessionId === undefined
+      ? 'A'
+      : sessionId === 'A' || sessionId === 'B' || sessionId === 'C'
+        ? sessionId
+        : null;
   const program = useActiveProgram();
   const settings = useWorkoutStore((s) => s.settings);
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs);
@@ -96,13 +190,21 @@ export default function SessionDetail() {
     Record<string, ExerciseState>
   >({});
   const [hasUnsaved, setHasUnsaved] = useState(false);
-  const celebrateTimeoutRef = useRef<number | null>(null);
-  const navigateTimeoutRef = useRef<number | null>(null);
   const [celebrating, setCelebrating] = useState(false);
-  const activeWeek =
-    Number(weekParam) ||
-    getCurrentWeekNumber(settings.programStart, program.durationWeeks);
-  const session = getSessionTemplate(program, sessionType);
+  const fallbackWeek = getCurrentWeekNumber(
+    settings.programStart,
+    program.durationWeeks
+  );
+  const parsedWeek = weekParam ? Number(weekParam) : fallbackWeek;
+  const hasInvalidWeekParam =
+    Number.isNaN(parsedWeek) ||
+    parsedWeek < 1 ||
+    parsedWeek > program.durationWeeks;
+  const activeWeek = hasInvalidWeekParam ? fallbackWeek : parsedWeek;
+  const session = sessionType
+    ? program.sessions.find((item) => item.id === sessionType) ?? null
+    : null;
+  const activeSessionType = (session?.id ?? 'A') as SessionType;
   const weekInfo = getWeekInfo(program, activeWeek);
   const lastLogsByExercise = useMemo(() => {
     const map = new Map<string, ExerciseLog>();
@@ -115,22 +217,9 @@ export default function SessionDetail() {
   }, [exerciseLogs]);
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
-  const draftKey = `session-draft-${activeUserId}-${sessionType}-${activeWeek}`;
-  const exerciseRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const parseRestToSeconds = (restText?: string) => {
-    if (!restText) return 90;
-    const match = restText.match(/([0-9]+)/);
-    const minutes = match ? Number(match[1]) : 1.5;
-    if (!Number.isFinite(minutes) || minutes <= 0) return 90;
-    return Math.round(minutes * 60);
-  };
-  const formatRestClock = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+  const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
   const startRestTimer = (restText?: string) => {
-    setRestSeconds(parseRestToSeconds(restText));
+    setRestSeconds(parseRestDuration(restText));
     setRestRunning(true);
   };
   const resetRestTimer = () => {
@@ -138,6 +227,7 @@ export default function SessionDetail() {
     setRestSeconds(0);
   };
   const scrollToNextSet = () => {
+    if (!session) return;
     for (const ex of session.exercises) {
       const state = exerciseState[ex.id];
       if (!state) continue;
@@ -167,15 +257,23 @@ export default function SessionDetail() {
         : 0,
     };
   }, [exerciseState]);
+  const targetsByExercise = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeTargetsForWeek>>();
+    if (!session) return map;
+    session.exercises.forEach((exercise) => {
+      map.set(
+        exercise.id,
+        computeTargetsForWeek(exercise, activeWeek, settings.recoveryExcellent),
+      );
+    });
+    return map;
+  }, [activeWeek, session, settings.recoveryExcellent]);
 
   const initialExerciseState = useMemo(() => {
+    if (!session) return {};
     const nextState: Record<string, ExerciseState> = {};
     session.exercises.forEach((ex) => {
-      const targets = computeTargetsForWeek(
-        ex,
-        activeWeek,
-        settings.recoveryExcellent
-      );
+      const targets = targetsByExercise.get(ex.id) ?? [];
       const totalSets = targets.reduce((sum, t) => sum + t.targetSets, 0);
       const lastLog = lastLogsByExercise.get(ex.id);
       nextState[ex.id] = {
@@ -189,10 +287,9 @@ export default function SessionDetail() {
     });
     return nextState;
   }, [
-    activeWeek,
     lastLogsByExercise,
-    session.exercises,
-    settings.recoveryExcellent,
+    session,
+    targetsByExercise,
   ]);
 
   useEffect(() => {
@@ -225,21 +322,14 @@ export default function SessionDetail() {
     return () => window.clearInterval(interval);
   }, [restRunning, restSeconds]);
 
-  useEffect(() => {
-    return () => {
-      if (celebrateTimeoutRef.current) {
-        window.clearTimeout(celebrateTimeoutRef.current);
-      }
-      if (navigateTimeoutRef.current) {
-        window.clearTimeout(navigateTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!Object.keys(exerciseState).length) return;
-    localStorage.setItem(draftKey, JSON.stringify(exerciseState));
-  }, [exerciseState, draftKey]);
+  const { lastSavedAt } = useDraftAutosave(draftKey, exerciseState, {
+    delayMs: 500,
+    enabled:
+      hasUnsaved &&
+      !celebrating &&
+      Object.keys(exerciseState).length > 0 &&
+      Boolean(session),
+  });
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -251,6 +341,22 @@ export default function SessionDetail() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsaved, celebrating]);
+
+  const navigateBack = () => {
+    if (hasUnsaved && !celebrating) {
+      const shouldLeave = window.confirm(unsavedMessage);
+      if (!shouldLeave) return;
+    }
+    const historyIndex =
+      typeof window !== 'undefined' && window.history.state && typeof window.history.state.idx === 'number'
+        ? window.history.state.idx
+        : 0;
+    if (historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate('/week');
+  };
 
   const handleSetChange = (
     exerciseId: string,
@@ -320,41 +426,30 @@ export default function SessionDetail() {
     setHasUnsaved(true);
   };
 
-  /**
-   * Validates and filters input to allow only numeric characters
-   * @param value - Input string value
-   * @param allowDecimal - Whether to allow decimal point (default: false)
-   * @returns Filtered string containing only valid numeric characters
-   */
   const validateNumericInput = (
     value: string,
     allowDecimal: boolean = false
   ): string => {
     if (value === '') return '';
-    const regex = allowDecimal ? /^[0-9]*\.?[0-9]*$/ : /^[0-9]*$/;
-    const filtered = value
-      .split('')
-      .filter((char) => {
-        if (allowDecimal) {
-          return /[0-9.]/.test(char);
-        }
-        return /[0-9]/.test(char);
-      })
-      .join('');
-    return regex.test(filtered) ? filtered : '';
+    const normalized = value.replace(',', '.');
+    if (!allowDecimal) {
+      return normalized.replace(/[^0-9]/g, '');
+    }
+
+    const filtered = normalized.replace(/[^0-9.]/g, '');
+    const [first, ...rest] = filtered.split('.');
+    if (rest.length === 0) return first;
+    return `${first}.${rest.join('')}`;
   };
 
   const addSet = (exerciseId: string) => {
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
+      if (!session) return prev;
       const exercise = session.exercises.find((e) => e.id === exerciseId);
       if (!exercise) return prev;
-      const targets = computeTargetsForWeek(
-        exercise,
-        activeWeek,
-        settings.recoveryExcellent
-      );
+      const targets = targetsByExercise.get(exercise.id) ?? [];
       let repRange: [number, number] = [10, 12];
       if (targets.length) {
         let idx = current.sets.length;
@@ -386,6 +481,7 @@ export default function SessionDetail() {
         },
       };
     });
+    setHasUnsaved(true);
   };
 
   const copyLastLog = (exerciseId: string) => {
@@ -416,13 +512,14 @@ export default function SessionDetail() {
   };
 
   const finishSession = async () => {
+    if (!session) return;
     try {
       const workoutDate = dayjs().toISOString();
       await logSession({
         workout: {
           date: workoutDate,
           weekNumber: activeWeek,
-          sessionType,
+          sessionType: activeSessionType,
           deload: program.deload.weeks.includes(activeWeek),
         },
         exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
@@ -443,12 +540,6 @@ export default function SessionDetail() {
       localStorage.removeItem(draftKey);
       setHasUnsaved(false);
       setCelebrating(true);
-      celebrateTimeoutRef.current = window.setTimeout(() => {
-        setCelebrating(false);
-      }, 8000);
-      navigateTimeoutRef.current = window.setTimeout(() => {
-        navigate('/');
-      }, 8200);
     } catch (err) {
       console.error(err);
       toast({
@@ -459,10 +550,29 @@ export default function SessionDetail() {
     }
   };
 
+  if (!session || hasInvalidWeekParam || !sessionType) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sessão inválida</CardTitle>
+          <CardDescription>
+            O link da sessão não está válido para o programa atual.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='flex flex-wrap gap-2'>
+          <Button onClick={() => navigate('/week')}>Voltar para semana</Button>
+          <Button variant='secondary' onClick={() => navigate('/')}>
+            Ir para início
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className='space-y-4'>
       {celebrating && (
-        <div className='fixed inset-0 z-30 pointer-events-none'>
+        <div className='fixed inset-0 z-30'>
           <div className='absolute inset-0 bg-black/40 backdrop-blur-sm' />
           <div className='absolute inset-0 overflow-hidden'>
             {sparkPositions.map((pos, idx) => (
@@ -495,6 +605,24 @@ export default function SessionDetail() {
               <div className='text-sm text-foreground/80'>
                 Boa! Recuperação e hidratação agora.
               </div>
+              <div className='mt-4 flex flex-wrap justify-center gap-2'>
+                <Button
+                  size='sm'
+                  onClick={() => {
+                    setCelebrating(false);
+                    navigate('/');
+                  }}
+                >
+                  Voltar ao início
+                </Button>
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={() => setCelebrating(false)}
+                >
+                  Continuar na sessão
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -525,7 +653,9 @@ export default function SessionDetail() {
           </Button>
           {hasUnsaved && (
             <Badge variant='outline' className='text-xs'>
-              rascunho salvo
+              {lastSavedAt
+                ? `rascunho salvo ${dayjs(lastSavedAt).format('HH:mm')}`
+                : 'rascunho pendente'}
             </Badge>
           )}
         </div>
@@ -570,11 +700,7 @@ export default function SessionDetail() {
 
       <div className='space-y-4'>
         {session.exercises.map((exercise) => {
-          const targets = computeTargetsForWeek(
-            exercise,
-            activeWeek,
-            settings.recoveryExcellent
-          );
+          const targets = targetsByExercise.get(exercise.id) ?? [];
           const state = exerciseState[exercise.id];
           if (!state) return null;
           const lastLogAvailable = lastLogsByExercise.get(exercise.id);
@@ -584,13 +710,6 @@ export default function SessionDetail() {
               key={exercise.id}
               className='relative pl-3'
               id={`exercise-${exercise.id}`}
-              ref={(el) => {
-                if (!el) {
-                  delete exerciseRefs.current[exercise.id];
-                  return;
-                }
-                exerciseRefs.current[exercise.id] = el;
-              }}
             >
               <span
                 className='absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60'
@@ -662,6 +781,10 @@ export default function SessionDetail() {
                     alt={`Execução de ${exercise.name}`}
                     className='h-40 w-full object-cover'
                     loading='lazy'
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = '/thumbs/chest-press.webp';
+                    }}
                   />
                 </div>
               )}
@@ -965,71 +1088,17 @@ export default function SessionDetail() {
         })}
       </div>
 
-      <div className='sticky bottom-0 z-10'>
-        <Card className='border-neutral/60 bg-surface/90 backdrop-blur'>
-          <CardContent className='flex flex-wrap items-center gap-3'>
-            <div className='flex min-w-[200px] flex-1 flex-col gap-1'>
-              <div className='flex items-center justify-between text-xs text-foreground/70'>
-                <span>
-                  {progress.completed}/{progress.total || 0} séries
-                </span>
-                <span>{progress.percent}%</span>
-              </div>
-              <div className='h-2 w-full overflow-hidden rounded-full bg-neutral/70'>
-                <div
-                  className='h-full rounded-full bg-gradient-to-r from-accent to-accentSecondary transition-all'
-                  style={{ width: `${progress.percent}%` }}
-                  aria-label='Progresso da sessão'
-                />
-              </div>
-            </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='secondary'
-                size='sm'
-                onClick={() => startRestTimer(session.exercises[0]?.rest)}
-              >
-                <Timer className='mr-2 h-4 w-4' />
-                {restRunning
-                  ? formatRestClock(restSeconds)
-                  : 'Iniciar descanso'}
-              </Button>
-              <div className='flex items-center gap-1'>
-                {[60, 90, 120].map((preset) => (
-                  <Button
-                    key={preset}
-                    variant='ghost'
-                    size='sm'
-                    className='px-2 text-xs'
-                    onClick={() => startRestTimer(String(preset / 60))}
-                    aria-label={`Iniciar ${preset} segundos de descanso`}
-                  >
-                    {preset / 60}m
-                  </Button>
-                ))}
-              </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={resetRestTimer}
-                disabled={!restSeconds}
-              >
-                Limpar
-              </Button>
-            </div>
-            <div className='flex flex-wrap gap-2'>
-              <Button onClick={finishSession} size='lg'>
-                <Check className='mr-2 h-5 w-5' />
-                Finalizar sessão
-              </Button>
-              <Button variant='secondary' onClick={() => navigate(-1)}>
-                <Timer className='mr-2 h-4 w-4' />
-                Voltar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <SessionFooter
+        progress={progress}
+        restRunning={restRunning}
+        restSeconds={restSeconds}
+        defaultRestText={session.exercises[0]?.rest}
+        onStartRest={startRestTimer}
+        onResetRest={resetRestTimer}
+        onFinish={finishSession}
+        onBack={navigateBack}
+        formatClock={formatRestClock}
+      />
     </div>
   );
 }

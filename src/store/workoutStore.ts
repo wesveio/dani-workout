@@ -1,24 +1,33 @@
 import { create } from 'zustand'
-import dayjs from 'dayjs'
+import Dexie from 'dexie'
 import { z } from 'zod'
 import { db } from '@/db/client'
 import { defaultUserId } from '@/data/users'
 import type { ExerciseLog, ExportBundle, SettingsState, SetEntry, UserId, WorkoutLog } from '@/types'
 
+const getCurrentMondayISO = () => {
+  const date = new Date()
+  const day = date.getDay()
+  const diffToMonday = (day + 6) % 7
+  date.setDate(date.getDate() - diffToMonday)
+  date.setHours(0, 0, 0, 0)
+  return date.toISOString()
+}
+
 const defaultSettings: SettingsState = {
   recoveryExcellent: false,
-  programStart: dayjs().startOf('week').add(1, 'day').toISOString(),
+  programStart: getCurrentMondayISO(),
 }
 
 const sortWorkouts = (workouts: WorkoutLog[]) =>
   workouts
     .slice()
-    .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+    .sort((a, b) => b.date.localeCompare(a.date))
 
 const sortExerciseLogs = (logs: ExerciseLog[]) =>
   logs
     .slice()
-    .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+    .sort((a, b) => b.date.localeCompare(a.date))
 
 const userIdSchema = z.union([z.literal('dani'), z.literal('wesley')])
 const setEntrySchema = z.object({
@@ -87,10 +96,24 @@ const makeId = () => {
 }
 
 export const useWorkoutStore = create<WorkoutStore>((set, get) => {
+  const getUserWorkouts = (userId: UserId) =>
+    db.workouts
+      .where('[userId+date]')
+      .between([userId, Dexie.minKey], [userId, Dexie.maxKey])
+      .reverse()
+      .toArray()
+
+  const getUserExerciseLogs = (userId: UserId) =>
+    db.exerciseLogs
+      .where('[userId+date]')
+      .between([userId, Dexie.minKey], [userId, Dexie.maxKey])
+      .reverse()
+      .toArray()
+
   const loadUserData = async (userId: UserId) => {
     const [workouts, exerciseLogs, settingsRecord] = await Promise.all([
-      db.workouts.where('userId').equals(userId).toArray(),
-      db.exerciseLogs.where('userId').equals(userId).toArray(),
+      getUserWorkouts(userId),
+      getUserExerciseLogs(userId),
       db.settings.get(`user:${userId}`),
     ])
     const settings = (settingsRecord?.value as SettingsState | undefined) ?? defaultSettings
@@ -180,8 +203,8 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
     exportData: async () => {
       const activeUserId = get().activeUserId
       const [workouts, exerciseLogs, settingsRecord] = await Promise.all([
-        db.workouts.where('userId').equals(activeUserId).toArray(),
-        db.exerciseLogs.where('userId').equals(activeUserId).toArray(),
+        getUserWorkouts(activeUserId),
+        getUserExerciseLogs(activeUserId),
         db.settings.get(`user:${activeUserId}`),
       ])
       return {

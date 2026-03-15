@@ -53,12 +53,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className='flex items-center gap-3'>
-            <div className='relative'>
-              <div className='h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40 cursor-pointer'>
+            <div className='h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40'>
                 {profile.avatarInitial}
-              </div>
+            </div>
+            <div className='flex flex-col gap-1'>
               <select
-                className='absolute inset-0 h-full w-full opacity-0 cursor-pointer'
+                className='h-9 rounded-full border border-neutral/50 bg-surface px-3 text-xs font-semibold text-foreground shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60'
                 value={activeUserId}
                 onChange={(e) => {
                   const next = e.target.value as typeof activeUserId;
@@ -75,7 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </option>
                 ))}
               </select>
-              <span className='sr-only'>Trocar usuário</span>
+              <span className='text-[11px] text-foreground/60'>Perfil ativo</span>
             </div>
             {isSession ? (
               <div className='leading-tight'>

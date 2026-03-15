@@ -43,6 +43,12 @@ class WorkoutDB extends Dexie {
           await settingsTable.put({ key: 'app', value: { activeUserId: 'dani' } satisfies ActiveUserState })
         }
       })
+    this.version(3).stores({
+      workouts: 'id, userId, [userId+date], date, weekNumber, sessionType',
+      exerciseLogs:
+        'id, userId, exerciseId, workoutId, [userId+date], [userId+exerciseId], [userId+exerciseId+date], date, sessionType, weekNumber',
+      settings: '&key',
+    })
   }
 }
 

@@ -3,12 +3,12 @@ import type { DeloadRule, Phase, Program, ScheduleDay, SessionTemplate, Warmup, 
 const imageBase = '/thumbs'
 const defaultImageSlug = ''
 const imageSlugById: Record<string, string> = {
-  'flat-bench-press-wes': 'barbell-bench-press',
+  'flat-bench-press-wes': 'benchpress',
   'seated-row-heavy': 'barbell-row',
   'overhead-press': 'dumbbell-shoulder-press',
   'weighted-pullup': 'pull-ups',
   'incline-press': 'incline-dumbbell-press',
-  'face-pull-wes': 'face-pull',
+  'face-pull-wes': 'reverse-flys',
   'triceps-pushdown': 'cable-tricep-pushdowns',
   'barbell-curl': 'barbell-curls',
 
@@ -41,7 +41,7 @@ const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
       const slug = imageSlugById[exercise.id] ?? defaultImageSlug
       return {
         ...exercise,
-        imageUrl: `${imageBase}/${slug}.png`,
+        imageUrl: `${imageBase}/${slug}.webp`,
       }
     }),
   }))

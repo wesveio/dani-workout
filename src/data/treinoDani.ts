@@ -42,7 +42,7 @@ const withImages = (sessions: SessionTemplate[]): SessionTemplate[] =>
       const slug = imageSlugById[exercise.id] ?? defaultImageSlug
       return {
         ...exercise,
-        imageUrl: `${imageBase}/${slug}.png`,
+        imageUrl: `${imageBase}/${slug}.webp`,
       }
     }),
   }))

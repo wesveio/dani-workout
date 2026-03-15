@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { BarChart3, ChevronRight } from 'lucide-react'
@@ -10,7 +11,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function Progress() {
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const program = useActiveProgram()
-  const exercises = program.sessions.flatMap((s) => s.exercises)
+  const exercises = useMemo(() => program.sessions.flatMap((s) => s.exercises), [program.sessions])
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, typeof exerciseLogs>()
+    for (const log of exerciseLogs) {
+      const list = map.get(log.exerciseId)
+      if (list) {
+        list.push(log)
+      } else {
+        map.set(log.exerciseId, [log])
+      }
+    }
+    return map
+  }, [exerciseLogs])
 
   return (
     <div className="space-y-4">
@@ -22,7 +35,7 @@ export default function Progress() {
 
       <div className="grid gap-3 md:grid-cols-2">
         {exercises.map((exercise) => {
-          const logs = exerciseLogs.filter((log) => log.exerciseId === exercise.id)
+          const logs = logsByExercise.get(exercise.id) ?? []
           const lastLog = logs[0]
           const bestWeight = Math.max(0, ...logs.map((log) => Math.max(...log.sets.map((s) => s.weight))))
           const lastDate = lastLog ? dayjs(lastLog.date).format('MMM D') : '—'

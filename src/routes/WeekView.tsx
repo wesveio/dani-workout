@@ -32,6 +32,13 @@ export default function WeekView() {
       program.weeks.find((w) => w.number === week) ?? program.weeks[0],
     [week, program]
   );
+  const workoutsByWeek = useMemo(() => {
+    const counts = new Map<number, number>();
+    workouts.forEach((workout) => {
+      counts.set(workout.weekNumber, (counts.get(workout.weekNumber) ?? 0) + 1);
+    });
+    return counts;
+  }, [workouts]);
 
   useEffect(() => {
     // Pré-seleciona sempre a semana atual ao abrir / quando a data inicial muda
@@ -62,9 +69,7 @@ export default function WeekView() {
               const num = idx + 1;
               const active = num === week;
               const isCurrent = num === currentWeek;
-              const completedCount = workouts.filter(
-                (w) => w.weekNumber === num
-              ).length;
+              const completedCount = workoutsByWeek.get(num) ?? 0;
               const weekCompleted =
                 completedCount >= program.schedule.length;
               return (

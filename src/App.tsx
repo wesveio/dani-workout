@@ -1,14 +1,28 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Dashboard from './routes/Dashboard'
-import WeekView from './routes/WeekView'
-import SessionDetail from './routes/SessionDetail'
-import ExerciseHistory from './routes/ExerciseHistory'
-import Progress from './routes/Progress'
-import Settings from './routes/Settings'
 import { Layout } from './components/Layout'
 import { useWorkoutStore } from './store/workoutStore'
 import { Card, CardContent } from './components/ui/card'
+
+const Dashboard = lazy(() => import('./routes/Dashboard'))
+const WeekView = lazy(() => import('./routes/WeekView'))
+const SessionDetail = lazy(() => import('./routes/SessionDetail'))
+const ExerciseHistory = lazy(() => import('./routes/ExerciseHistory'))
+const Progress = lazy(() => import('./routes/Progress'))
+const Settings = lazy(() => import('./routes/Settings'))
+
+function RouteFallback() {
+  return (
+    <div className="grid min-h-[40vh] place-items-center">
+      <Card className="w-[320px]">
+        <CardContent className="p-6 text-center">
+          <div className="text-sm font-semibold">Carregando tela…</div>
+          <div className="mt-2 text-xs text-foreground/70">Preparando conteúdo</div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
 function App() {
   const init = useWorkoutStore((s) => s.init)
@@ -47,15 +61,17 @@ function App() {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/week" element={<WeekView />} />
-        <Route path="/session/:sessionId/:weekNumber?" element={<SessionDetail />} />
-        <Route path="/exercise/:exerciseId" element={<ExerciseHistory />} />
-        <Route path="/progress" element={<Progress />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/week" element={<WeekView />} />
+          <Route path="/session/:sessionId/:weekNumber?" element={<SessionDetail />} />
+          <Route path="/exercise/:exerciseId" element={<ExerciseHistory />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </Layout>
   )
 }

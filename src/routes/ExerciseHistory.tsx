@@ -1,8 +1,9 @@
+import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { ArrowLeft, PlayCircle, Trophy, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { Formatter, NameType } from 'recharts/types/component/DefaultTooltipContent'
+import type { Formatter, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { findExerciseById, focusLabels } from '@/lib/program'
 import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
@@ -27,6 +28,38 @@ export default function ExerciseHistory() {
   const program = useActiveProgram()
   const exercise = exerciseId ? findExerciseById(program, exerciseId) : undefined
 
+  const logs = useMemo(
+    () =>
+      !exercise
+        ? []
+        : exerciseLogs
+            .filter((log) => log.exerciseId === exercise.id)
+            .sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()),
+    [exercise, exerciseLogs],
+  )
+
+  const chartData: ChartDatum[] = useMemo(
+    () =>
+      logs.map((log) => ({
+        date: dayjs(log.date).format('MMM D'),
+        volume: computeVolume(log),
+        topWeight: log.sets.reduce((max, set) => Math.max(max, set.weight), 0),
+      })),
+    [logs],
+  )
+
+  const bestVolume = useMemo(() => Math.max(0, ...chartData.map((d) => d.volume)), [chartData])
+  const bestWeight = useMemo(() => Math.max(0, ...chartData.map((d) => d.topWeight)), [chartData])
+  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
+    const numeric =
+      typeof value === 'number'
+        ? value
+        : Array.isArray(value)
+          ? Number(value[0]) || 0
+          : Number(value) || 0
+    return name === 'topWeight' ? [`${numeric} kg`, 'Melhor carga'] : [Math.round(numeric), 'Volume']
+  }
+
   if (!exercise) {
     return (
       <div className="space-y-3">
@@ -37,19 +70,6 @@ export default function ExerciseHistory() {
       </div>
     )
   }
-
-  const logs = exerciseLogs
-    .filter((log) => log.exerciseId === exercise.id)
-    .sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
-
-  const chartData: ChartDatum[] = logs.map((log) => ({
-    date: dayjs(log.date).format('MMM D'),
-    volume: computeVolume(log),
-    topWeight: log.sets.reduce((max, set) => Math.max(max, set.weight), 0),
-  }))
-
-  const bestVolume = Math.max(0, ...chartData.map((d) => d.volume))
-  const bestWeight = Math.max(0, ...chartData.map((d) => d.topWeight))
 
   return (
     <div className="space-y-4">
@@ -105,19 +125,7 @@ export default function ExerciseHistory() {
                 <YAxis tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{ borderRadius: 12, border: '1px solid #454132', background: '#F2F1EF' }}
-                  formatter={
-                    ((value, name) => {
-                      const numeric =
-                        typeof value === 'number'
-                          ? value
-                          : Array.isArray(value)
-                            ? Number(value[0]) || 0
-                            : Number(value) || 0
-                      return name === 'topWeight'
-                        ? [`${numeric} kg`, 'Melhor carga']
-                        : [Math.round(numeric), 'Volume']
-                    }) as Formatter<any, NameType>
-                  }
+                  formatter={tooltipFormatter}
                 />
                 <Area
                   type="monotone"
