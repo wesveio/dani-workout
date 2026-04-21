@@ -5,13 +5,13 @@ import {
   Dumbbell,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { userList } from '@/data/users';
 import { getCurrentWeekNumber } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user';
+import { useWorkoutStore } from '@/store/workoutStore';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { useWorkoutStore } from '@/store/workoutStore';
+import { ProfileSwitcher } from './ProfileSwitcher';
 
 const navItems = [
   { to: '/', label: 'Início', icon: Home },
@@ -26,16 +26,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const profile = useActiveUserProfile();
   const program = useActiveProgram();
   const settings = useWorkoutStore((s) => s.settings);
-  const activeUserId = useWorkoutStore((s) => s.activeUserId);
-  const switchUser = useWorkoutStore((s) => s.switchUser);
-  const loading = useWorkoutStore((s) => s.loading);
-  const weekNumber = getCurrentWeekNumber(
-    settings.programStart,
-    program.durationWeeks
-  );
-  const weekInfo = program.weeks.find((w) => w.number === weekNumber);
+  const weekNumber = program
+    ? getCurrentWeekNumber(settings.programStart, program.durationWeeks)
+    : 0;
+  const weekInfo = program?.weeks.find((w) => w.number === weekNumber);
   const isSession = location.pathname.startsWith('/session');
-  const scheduleLabel = program.schedule.map((day) => day.day.slice(0, 3)).join(' / ');
+  const scheduleLabel = program?.schedule.map((day) => day.day.slice(0, 3)).join(' / ') ?? '';
 
   return (
     <div className='min-h-screen bg-background text-foreground'>
@@ -53,30 +49,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className='flex items-center gap-3'>
-            <div className='h-11 w-11 rounded-2xl bg-foreground text-background grid place-items-center font-bold shadow-soft shadow-accent/40'>
-                {profile.avatarInitial}
-            </div>
-            <div className='flex flex-col gap-1'>
-              <select
-                className='h-9 rounded-full border border-neutral/50 bg-surface px-3 text-xs font-semibold text-foreground shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60'
-                value={activeUserId}
-                onChange={(e) => {
-                  const next = e.target.value as typeof activeUserId;
-                  if (next !== activeUserId) {
-                    switchUser(next);
-                  }
-                }}
-                disabled={loading}
-                aria-label='Selecionar usuário'
-              >
-                {userList.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.shortName}
-                  </option>
-                ))}
-              </select>
-              <span className='text-[11px] text-foreground/60'>Perfil ativo</span>
-            </div>
+            <ProfileSwitcher />
             {isSession ? (
               <div className='leading-tight'>
                 <div className='text-xs uppercase tracking-[0.2em] text-foreground/70'>
@@ -91,14 +64,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
             ) : (
               <div>
                 <div className='text-xs uppercase tracking-[0.2em] text-foreground/70'>
-                  {profile.name}
+                  {profile?.name ?? ''}
                 </div>
-                <div className='text-lg font-semibold leading-tight text-foreground'>
-                  {program.name}
-                </div>
-                <div className='text-xs text-foreground/70'>
-                  {scheduleLabel}
-                </div>
+                {program && (
+                  <div className='text-lg font-semibold leading-tight text-foreground'>
+                    {program.name}
+                  </div>
+                )}
+                {scheduleLabel && (
+                  <div className='text-xs text-foreground/70'>
+                    {scheduleLabel}
+                  </div>
+                )}
               </div>
             )}
           </div>
