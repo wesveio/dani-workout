@@ -354,9 +354,11 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       const exerciseLogs = sortExerciseLogs(
         bundle.exerciseLogs.map((ex) => ({ ...ex, userId: ex.userId ?? targetUserId })),
       )
-      const settings =
-        bundle.settings ??
-        ((existingSettings?.value as SettingsState | undefined) ?? defaultSettings)
+      const settings: SettingsState = {
+        ...defaultSettings,
+        ...((existingSettings?.value as SettingsState | undefined) ?? {}),
+        ...(bundle.settings ?? {}),
+      }
       await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, async () => {
         await db.workouts.where('userId').equals(targetUserId).delete()
         await db.exerciseLogs.where('userId').equals(targetUserId).delete()

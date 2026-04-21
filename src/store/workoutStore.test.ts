@@ -168,7 +168,7 @@ describe('deleteProfile', () => {
     // Seed some data for user-a
     await fakeDb.workouts.put({ id: 'w1', userId: 'user-a', date: '2024-01-01', weekNumber: 1, sessionType: 'A', deload: false })
     await fakeDb.exerciseLogs.put({ id: 'e1', userId: 'user-a', workoutId: 'w1', exerciseId: 'ex1', sets: [], date: '2024-01-01', weekNumber: 1, sessionType: 'A' })
-    await fakeDb.settings.put({ key: 'user:user-a', value: { recoveryExcellent: false, programStart: '2024-01-01' } })
+    await fakeDb.settings.put({ key: 'user:user-a', value: { recoveryExcellent: false, programStart: '2024-01-01', defaultRestSeconds: 90, exerciseRestConfig: {} } })
 
     await store.deleteProfile('user-a')
 
