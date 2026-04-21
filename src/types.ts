@@ -1,4 +1,4 @@
-export type UserId = 'dani' | 'wesley'
+export type UserId = string
 export type SessionType = 'A' | 'B' | 'C'
 
 export type SetEntry = {
@@ -35,9 +35,41 @@ export type SettingsState = {
   programStart: string
 }
 
+export type Profile = {
+  id: string
+  name: string
+  shortName: string
+  avatarInitial: string
+  avatarColor: string
+}
+
+export type WorkoutTemplate = {
+  id: string
+  userId: string
+  name: string
+  exercises: Array<{ exerciseId: string; defaultSets: SetEntry[] }>
+  createdAt: string
+}
+
+export type BodyMetric = {
+  id: string
+  userId: string
+  date: string
+  weight?: number
+  waist?: number
+  hips?: number
+  chest?: number
+  arms?: number
+  notes?: string
+}
+
 export type ExportBundle = {
   userId: UserId
+  formatVersion: number
   workouts: WorkoutLog[]
   exerciseLogs: ExerciseLog[]
   settings: SettingsState
+  profiles?: Profile[]
+  templates?: WorkoutTemplate[]
+  bodyMetrics?: BodyMetric[]
 }
