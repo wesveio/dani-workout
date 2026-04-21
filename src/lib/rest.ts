@@ -4,24 +4,28 @@ const NUMBER_PATTERN = /\d+(?:[.,]\d+)?/g
 
 const parseNumber = (value: string) => Number(value.replace(',', '.'))
 
+const MAX_REST = 600
+
 export const parseRestDuration = (value?: string, fallbackSeconds = 90): number => {
-  if (!value) return fallbackSeconds
+  if (!value) return Math.min(fallbackSeconds, MAX_REST)
 
   const text = value.trim().toLowerCase()
   const matches = text.match(NUMBER_PATTERN)
-  if (!matches || matches.length === 0) return fallbackSeconds
+  if (!matches || matches.length === 0) return Math.min(fallbackSeconds, MAX_REST)
 
   const primary = parseNumber(matches[0])
-  if (!Number.isFinite(primary) || primary <= 0) return fallbackSeconds
+  if (!Number.isFinite(primary) || primary <= 0) return Math.min(fallbackSeconds, MAX_REST)
 
   const hasMinutes = MINUTES_PATTERN.test(text)
   const hasSeconds = SECONDS_PATTERN.test(text)
 
-  if (hasMinutes) return Math.round(primary * 60)
-  if (hasSeconds) return Math.round(primary)
+  if (hasMinutes) return Math.min(Math.round(primary * 60), MAX_REST)
+  if (hasSeconds) return Math.min(Math.round(primary), MAX_REST)
 
   // No explicit unit: short values likely mean minutes, long values seconds.
-  return primary <= 10 ? Math.round(primary * 60) : Math.round(primary)
+  return primary <= 10
+    ? Math.min(Math.round(primary * 60), MAX_REST)
+    : Math.min(Math.round(primary), MAX_REST)
 }
 
 export const formatRestClock = (seconds: number): string => {
