@@ -104,7 +104,7 @@ Components required this phase (all already installed in src/components/ui/):
 | DropdownMenu | Profile switcher in header (replaces `<select>`) | No — add via shadcn |
 | Dialog | Create-profile modal | Yes (dialog.tsx) |
 | Input | Profile name field in create dialog, name edit in Settings | Yes (input.tsx) |
-| Button | "Criar perfil" CTA, "Cancelar" secondary, delete action | Yes (button.tsx) |
+| Button | "Criar perfil" CTA, "Não criar" secondary, delete action | Yes (button.tsx) |
 | Label | Form field label in dialog | Yes (label.tsx) |
 
 DropdownMenu is not yet in src/components/ui/ — must be added. No third-party registry needed; use shadcn official.
@@ -117,7 +117,7 @@ DropdownMenu is not yet in src/components/ui/ — must be added. No third-party 
 
 - **Trigger:** Tap avatar circle (44×44px) in header
 - **Open state:** Panel opens below avatar, max-height 280px, overflow-y scroll if >4 profiles
-- **Profile list item:** 44px min-height, avatar color dot (24px circle) + profile name (16px/400) + checkmark (accent #4EFF74) on active profile
+- **Profile list item:** 44px min-height, avatar color dot (24px circle) + profile name (16px/400) + checkmark (accent #4EFF74, `aria-label="Perfil ativo"`) on active profile
 - **"+ Novo perfil" item:** Bottom of list, separated by 1px divider (#2C2C2C), text-accent (#4EFF74), 44px min-height
 - **Blocked state (active workout):** All non-active profiles show disabled style (text-muted, cursor-not-allowed). Tap shows inline warning text below dropdown: "Finalize ou descarte o treino antes de trocar de perfil" (text-[#FF4444], 14px)
 - **Animation:** Dropdown slides down 4px + fades in, 150ms ease-out
@@ -130,12 +130,13 @@ DropdownMenu is not yet in src/components/ui/ — must be added. No third-party 
 - **State 3 — Saving:** CTA button shows spinner (lucide `Loader2` icon, animate-spin), disabled
 - **State 4 — Success:** Dialog closes, new profile is automatically active, dropdown trigger updates to new avatar initial + color
 - **Avatar preview:** 44px color circle with initial letter shown in dialog, updates live as user types name. Color auto-assigned from palette (not user-selectable at creation — editable later in Settings per D-08)
+- **Primary focal point:** Avatar color preview circle — largest visual element in dialog, centered above the name input field. Eye lands here first, then moves down to the input.
 
 ### Profile Edit (Settings — "Meu Perfil" section)
 
 - **Name field:** Text input, current name pre-filled, 16px/400
 - **Avatar color:** Row of 6 color dots (32px circles), tap to select, selected has 2px white ring + checkmark overlay
-- **Save:** "Salvar" button, accent variant, enabled when any change detected
+- **Save:** "Salvar perfil" button, accent variant, enabled when any change detected
 - **Layout:** Stacked vertically with lg (24px) gap between name field and color picker row
 
 ### Delete Profile
@@ -159,12 +160,12 @@ All copy in Brazilian Portuguese (consistent with existing app language observed
 | Create dialog title | "Novo perfil" |
 | Create dialog input label | "Nome" |
 | Create dialog input placeholder | "Nome do perfil" |
-| Create dialog cancel | "Cancelar" |
+| Create dialog cancel | "Não criar" |
 | Dropdown item — add profile | "+ Novo perfil" |
-| Dropdown active label | (checkmark icon only — no text label) |
+| Dropdown active label | (checkmark icon, `aria-label="Perfil ativo"`) |
 | Active workout block warning | "Finalize ou descarte o treino antes de trocar de perfil" |
 | Settings section heading | "Meu Perfil" |
-| Settings save CTA | "Salvar" |
+| Settings save CTA | "Salvar perfil" |
 | Settings avatar color label | "Cor do avatar" |
 | Delete entry button | "Excluir perfil" |
 | Delete dialog title | "Excluir [Nome]?" |
