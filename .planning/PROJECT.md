@@ -33,13 +33,13 @@ Users can log workouts fast with minimal friction and see their progression clea
 - Export/import data backup — Validated in Phase 1: Foundation (format versioning, auto-upgrade old exports)
 - Progress visualization with charts
 - Broadened data layer: UserId→string, Dexie v4, profiles/templates/bodyMetrics tables — Validated in Phase 1: Foundation
+- Multi-user local profiles: create, switch, edit, delete with data isolation — Validated in Phase 2: Multi-User Profiles
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
 - [ ] Full UX/UI redesign with bold/energetic dark theme
-- [ ] Multi-user local profiles
 - [ ] Rest timer between sets
 - [ ] Exercise history & progression tracking
 - [ ] Workout templates + custom programs
@@ -97,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after Phase 1: Foundation complete*
+*Last updated: 2026-04-21 after Phase 2: Multi-User Profiles complete*
