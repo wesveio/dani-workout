@@ -21,6 +21,8 @@ describe('SessionDetail integration', () => {
       settings: {
         recoveryExcellent: false,
         programStart: dayjs().startOf('week').add(1, 'day').toISOString(),
+        defaultRestSeconds: 90,
+        exerciseRestConfig: {},
       },
       logSession: vi.fn(async () => 'workout-1'),
     })
