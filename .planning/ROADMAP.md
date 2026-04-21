@@ -81,7 +81,13 @@ Plans:
   3. Cursor advances automatically to the next set after saving
   4. A PR badge appears on the set when a personal record is detected
   5. User can view full history and a progression chart (weight, volume, estimated 1RM) for any exercise
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Epley utility + SetRow extraction + PrBadge component with tests
+- [ ] 04-02-PLAN.md — SessionDetail integration: SetRow wiring, PR detection, auto-advance focus
+- [ ] 04-03-PLAN.md — ExerciseHistory upgrade: metric tabs, progression chart, 1RM, PR summary
+- [ ] 04-04-PLAN.md — Full suite verification + human visual/functional checkpoint
 
 ### Phase 5: Workout Templates
 **Goal**: Users can save and reuse workouts as templates, eliminating repetitive setup
@@ -115,6 +121,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation | 0/2 | Planning complete | - |
 | 2. Multi-User Profiles | 0/4 | Planning complete | - |
 | 3. UI Redesign + Rest Timer | 0/4 | Planning complete | - |
-| 4. Exercise History + Logging UX | 0/TBD | Not started | - |
+| 4. Exercise History + Logging UX | 0/4 | Planning complete | - |
 | 5. Workout Templates | 0/TBD | Not started | - |
 | 6. Body Metrics + PWA Safety | 0/TBD | Not started | - |
