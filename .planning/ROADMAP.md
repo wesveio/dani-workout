@@ -44,7 +44,13 @@ Plans:
   2. User can switch profiles and see only that profile's workouts and data
   3. User can edit their profile name and avatar
   4. User can delete a profile and all associated data is removed
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Store actions (createProfile, updateProfile, deleteProfile) + data layer migration (TDD)
+- [ ] 02-02-PLAN.md — ProfileSwitcher dropdown + CreateProfileDialog + Layout.tsx migration
+- [ ] 02-03-PLAN.md — Settings "Meu Perfil" section with edit + delete flows
+- [ ] 02-04-PLAN.md — data/users.ts cleanup + human verification checkpoint
 
 ### Phase 3: UI Redesign + Rest Timer
 **Goal**: The app looks and feels like a premium gym tool with an integrated rest timer
@@ -101,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/2 | Planning complete | - |
-| 2. Multi-User Profiles | 0/TBD | Not started | - |
+| 2. Multi-User Profiles | 0/4 | Planning complete | - |
 | 3. UI Redesign + Rest Timer | 0/TBD | Not started | - |
 | 4. Exercise History + Logging UX | 0/TBD | Not started | - |
 | 5. Workout Templates | 0/TBD | Not started | - |
