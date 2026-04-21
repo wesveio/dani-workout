@@ -1,8 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dayjs from 'dayjs'
-import { Download, RefreshCw, ShieldCheck, Upload } from 'lucide-react'
+import { Check, Download, RefreshCw, ShieldCheck, Upload } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { useActiveUserProfile } from '@/lib/user'
+import { db } from '@/db/client'
+import { AVATAR_COLORS } from '@/lib/profile-constants'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -10,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { toast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import type { Profile } from '@/types'
 
 export default function Settings() {
   const profile = useActiveUserProfile()
@@ -18,8 +22,46 @@ export default function Settings() {
   const exportData = useWorkoutStore((s) => s.exportData)
   const importData = useWorkoutStore((s) => s.importData)
   const reset = useWorkoutStore((s) => s.reset)
+  const updateProfile = useWorkoutStore((s) => s.updateProfile)
+  const deleteProfile = useWorkoutStore((s) => s.deleteProfile)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [openReset, setOpenReset] = useState(false)
+  const profileCount = useLiveQuery(() => db.profiles.count(), []) ?? 1
+  const [editName, setEditName] = useState(profile?.name ?? '')
+  const [editColor, setEditColor] = useState(profile?.avatarColor ?? AVATAR_COLORS[0])
+  const [openDelete, setOpenDelete] = useState(false)
+  const [confirmName, setConfirmName] = useState('')
+
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.name)
+      setEditColor(profile.avatarColor)
+    }
+  }, [profile?.id])
+
+  const hasChanges =
+    editName.trim() !== (profile?.name ?? '') ||
+    editColor !== (profile?.avatarColor ?? '')
+
+  const handleUpdate = async () => {
+    if (!profile) return
+    const trimmed = editName.trim()
+    if (!trimmed || trimmed.length > 50) return
+    const patch: Partial<Pick<Profile, 'name' | 'avatarColor'>> = {}
+    if (trimmed !== profile.name) patch.name = trimmed
+    if (editColor !== profile.avatarColor) patch.avatarColor = editColor
+    if (Object.keys(patch).length === 0) return
+    await updateProfile(profile.id, patch)
+    toast({ title: 'Perfil atualizado', description: 'Alterações salvas.' })
+  }
+
+  const handleDelete = async () => {
+    if (!profile) return
+    await deleteProfile(profile.id)
+    toast({ title: 'Perfil excluído', description: `${profile.name} foi removido.` })
+    setOpenDelete(false)
+    setConfirmName('')
+  }
 
   const onExport = async () => {
     const bundle = await exportData()
@@ -30,7 +72,7 @@ export default function Settings() {
     link.download = `training-export-${bundle.userId}-${dayjs().format('YYYYMMDD-HHmm')}.json`
     link.click()
     URL.revokeObjectURL(url)
-    toast({ title: 'Exportado', description: `JSON do ${profile.shortName} pronto. Guarde com cuidado.` })
+    toast({ title: 'Exportado', description: `JSON do ${profile?.shortName} pronto. Guarde com cuidado.` })
   }
 
   const onImport = async (file?: File) => {
@@ -50,7 +92,7 @@ export default function Settings() {
 
   const onReset = async () => {
     await reset()
-    toast({ title: 'Dados apagados', description: `Registros de ${profile.shortName} removidos. Configurações preservadas.` })
+    toast({ title: 'Dados apagados', description: `Registros de ${profile?.shortName} removidos. Configurações preservadas.` })
     setOpenReset(false)
   }
 
@@ -59,8 +101,101 @@ export default function Settings() {
       <div>
         <div className="text-xs uppercase tracking-[0.2em] text-muted">Configurações</div>
         <h1 className="text-2xl font-bold">Dados & recuperação</h1>
-        <p className="text-sm text-foreground/80">Foco no offline. Importação/exportação em JSON para {profile.shortName}.</p>
+        <p className="text-sm text-foreground/80">Foco no offline. Importação/exportação em JSON para {profile?.shortName ?? ''}.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Meu Perfil</CardTitle>
+          <CardDescription>Edite nome e cor do avatar.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Name field */}
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Nome do perfil"
+              maxLength={50}
+            />
+          </div>
+
+          {/* Avatar color picker - row of 6 dots */}
+          <div className="space-y-2">
+            <Label>Cor do avatar</Label>
+            <div className="flex gap-2">
+              {AVATAR_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="h-8 w-8 rounded-full grid place-items-center ring-offset-background transition-all"
+                  style={{
+                    backgroundColor: color,
+                    ...(editColor === color ? { outline: '2px solid white', outlineOffset: '2px' } : {}),
+                  }}
+                  onClick={() => setEditColor(color)}
+                  aria-label={`Selecionar cor ${color}`}
+                >
+                  {editColor === color && <Check className="h-4 w-4 text-[#161616]" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Save button */}
+          <Button
+            onClick={handleUpdate}
+            disabled={!hasChanges || !editName.trim()}
+          >
+            Salvar perfil
+          </Button>
+
+          {/* Delete section */}
+          <div className="pt-4 border-t border-neutral/50">
+            <Dialog open={openDelete} onOpenChange={(open) => { setOpenDelete(open); if (!open) setConfirmName('') }}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="text-[#FF4444] border-[#FF4444]"
+                  disabled={profileCount <= 1}
+                  title={profileCount <= 1 ? 'Você precisa de pelo menos um perfil.' : undefined}
+                >
+                  Excluir perfil
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Excluir {profile?.name}?</DialogTitle>
+                  <DialogDescription>
+                    Esta ação não pode ser desfeita. Todos os dados de treino deste perfil serão apagados permanentemente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <Label>Digite {profile?.name} para confirmar</Label>
+                  <Input
+                    value={confirmName}
+                    onChange={(e) => setConfirmName(e.target.value)}
+                    placeholder={profile?.name}
+                  />
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => { setOpenDelete(false); setConfirmName('') }}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="bg-[#FF4444] text-[#161616] hover:bg-[#FF4444]/90"
+                    disabled={confirmName.trim() !== profile?.name}
+                    onClick={handleDelete}
+                  >
+                    Excluir perfil
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
