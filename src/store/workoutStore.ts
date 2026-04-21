@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import Dexie from 'dexie'
 import { z } from 'zod'
 import { db } from '@/db/client'
-import { defaultUserId } from '@/data/users'
-import type { ExerciseLog, ExportBundle, SettingsState, SetEntry, UserId, WorkoutLog } from '@/types'
+import { pickColor } from '@/lib/profile-constants'
+import type { ExerciseLog, ExportBundle, Profile, SettingsState, SetEntry, UserId, WorkoutLog } from '@/types'
 
 const getCurrentMondayISO = () => {
   const date = new Date()
@@ -119,6 +119,9 @@ type WorkoutStore = {
   error: string | null
   init: () => Promise<void>
   switchUser: (userId: UserId) => Promise<void>
+  createProfile: (name: string) => Promise<void>
+  updateProfile: (id: string, patch: Partial<Pick<Profile, 'name' | 'avatarColor'>>) => Promise<void>
+  deleteProfile: (userId: UserId) => Promise<void>
   logSession: (payload: {
     workout: Omit<WorkoutLog, 'id' | 'userId'>
     exercises: Array<{ exerciseId: string; sets: SetEntry[]; notes?: string }>
@@ -170,14 +173,16 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
     workouts: [],
     exerciseLogs: [],
     settings: defaultSettings,
-    activeUserId: defaultUserId,
+    activeUserId: 'dani',
     loading: true,
     error: null,
     init: async () => {
       try {
         const appSettings = await db.settings.get('app')
+        const profiles = await db.profiles.toArray()
+        const fallbackId = profiles[0]?.id ?? 'dani'
         const activeUserId =
-          (appSettings?.value as { activeUserId?: UserId } | undefined)?.activeUserId ?? defaultUserId
+          (appSettings?.value as { activeUserId?: UserId } | undefined)?.activeUserId ?? fallbackId
         const data = await loadUserData(activeUserId)
         await db.settings.put({ key: 'app', value: { activeUserId } })
         set({ ...data, activeUserId, loading: false, error: null })
@@ -187,13 +192,17 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
           workouts: [],
           exerciseLogs: [],
           settings: defaultSettings,
-          activeUserId: defaultUserId,
+          activeUserId: 'dani',
           loading: false,
           error: 'Falha ao carregar dados locais. Reinicie ou limpe o cache.',
         })
       }
     },
     switchUser: async (userId) => {
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/session')) {
+        set({ error: 'Finalize ou descarte o treino antes de trocar de perfil' })
+        return
+      }
       set({ loading: true })
       try {
         const data = await loadUserData(userId)
@@ -202,6 +211,65 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       } catch (err) {
         console.error(err)
         set({ loading: false, error: 'Não foi possível trocar de usuário agora.' })
+      }
+    },
+    createProfile: async (name) => {
+      const trimmed = name.trim()
+      if (!trimmed || trimmed.length > 50) return
+      try {
+        const profiles = await db.profiles.toArray()
+        const profile: Profile = {
+          id: makeId(),
+          name: trimmed,
+          shortName: trimmed.split(' ')[0],
+          avatarInitial: trimmed.charAt(0).toUpperCase(),
+          avatarColor: pickColor(profiles.length),
+        }
+        await db.profiles.put(profile)
+        await get().switchUser(profile.id)
+      } catch (err) {
+        console.error(err)
+        set({ error: 'Não foi possível criar o perfil.' })
+      }
+    },
+    updateProfile: async (id, patch) => {
+      try {
+        const existing = await db.profiles.get(id)
+        if (!existing) return
+        const updated: Profile = { ...existing, ...patch }
+        if (patch.name) {
+          const trimmed = patch.name.trim()
+          updated.name = trimmed
+          updated.shortName = trimmed.split(' ')[0]
+          updated.avatarInitial = trimmed.charAt(0).toUpperCase()
+        }
+        await db.profiles.put(updated)
+      } catch (err) {
+        console.error(err)
+        set({ error: 'Não foi possível atualizar o perfil.' })
+      }
+    },
+    deleteProfile: async (userId) => {
+      try {
+        const profiles = await db.profiles.toArray()
+        if (profiles.length <= 1) return
+        await db.transaction('rw', db.profiles, db.workouts, db.exerciseLogs, db.settings, db.bodyMetrics, db.templates, async () => {
+          await db.profiles.delete(userId)
+          await db.workouts.where('userId').equals(userId).delete()
+          await db.exerciseLogs.where('userId').equals(userId).delete()
+          await db.bodyMetrics.where('userId').equals(userId).delete()
+          await db.templates.where('userId').equals(userId).delete()
+          await db.settings.delete(`user:${userId}`)
+        })
+        if (userId === get().activeUserId) {
+          const remaining = await db.profiles.toArray()
+          if (remaining.length > 0) {
+            await get().switchUser(remaining[0].id)
+          }
+        }
+      } catch (err) {
+        console.error(err)
+        set({ error: 'Não foi possível remover o perfil.' })
       }
     },
     logSession: async ({ workout, exercises }) => {

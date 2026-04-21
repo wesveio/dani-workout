@@ -184,6 +184,9 @@ describe('deleteProfile', () => {
       { id: 'only-one', name: 'Sole', shortName: 'Sole', avatarInitial: 'S', avatarColor: '#2DD4BF' },
     ]
     const { store, fakeDb } = await makeStore(profiles)
+    // Clear seeded profiles (dani, wesley) so only 'only-one' remains
+    await fakeDb.profiles.clear()
+    await fakeDb.profiles.put(profiles[0])
     await store.deleteProfile('only-one')
     const remaining = await fakeDb.profiles.get('only-one')
     expect(remaining).toBeDefined()
@@ -196,16 +199,17 @@ describe('deleteProfile', () => {
       { id: 'user-x', name: 'X', shortName: 'X', avatarInitial: 'X', avatarColor: '#2DD4BF' },
       { id: 'user-y', name: 'Y', shortName: 'Y', avatarInitial: 'Y', avatarColor: '#818CF8' },
     ]
-    const { fakeDb } = await makeStore(profiles)
-    const { WorkoutDB } = await import('@/db/client')
-    vi.doMock('@/db/client', () => ({ WorkoutDB, db: fakeDb }))
-    vi.resetModules()
-    const { useWorkoutStore: freshStore } = await import('./workoutStore')
-    // Manually set activeUserId to user-x
-    freshStore.setState({ activeUserId: 'user-x' })
-    await freshStore.getState().deleteProfile('user-x')
-    const { useWorkoutStore: afterStore } = await import('./workoutStore')
-    const newActiveId = afterStore.getState().activeUserId
+    const { store, fakeDb } = await makeStore(profiles)
+    // Clear seeded profiles and put only our two test profiles
+    await fakeDb.profiles.clear()
+    await fakeDb.profiles.bulkPut(profiles)
+    // Set activeUserId to user-x on the store we have
+    store.activeUserId = 'user-x'
+    // Use the same store reference — check state after deleteProfile
+    const { useWorkoutStore } = await import('./workoutStore')
+    useWorkoutStore.setState({ activeUserId: 'user-x' })
+    await useWorkoutStore.getState().deleteProfile('user-x')
+    const newActiveId = useWorkoutStore.getState().activeUserId
     expect(newActiveId).toBe('user-y')
     fakeDb.close()
     vi.doUnmock('@/db/client')
