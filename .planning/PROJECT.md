@@ -30,8 +30,9 @@ Users can log workouts fast with minimal friction and see their progression clea
 
 - Workout logging (basic — exists but needs UX overhaul)
 - Offline-first PWA with service worker
-- Export/import data backup
+- Export/import data backup — Validated in Phase 1: Foundation (format versioning, auto-upgrade old exports)
 - Progress visualization with charts
+- Broadened data layer: UserId→string, Dexie v4, profiles/templates/bodyMetrics tables — Validated in Phase 1: Foundation
 
 ### Active
 
@@ -96,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after milestone v1.0 initialization*
+*Last updated: 2026-04-21 after Phase 1: Foundation complete*
