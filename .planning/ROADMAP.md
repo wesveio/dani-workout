@@ -47,10 +47,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Store actions (createProfile, updateProfile, deleteProfile) + data layer migration (TDD)
-- [ ] 02-02-PLAN.md — ProfileSwitcher dropdown + CreateProfileDialog + Layout.tsx migration
-- [ ] 02-03-PLAN.md — Settings "Meu Perfil" section with edit + delete flows
-- [ ] 02-04-PLAN.md — data/users.ts cleanup + human verification checkpoint
+- [x] 02-01-PLAN.md — Store actions (createProfile, updateProfile, deleteProfile) + data layer migration (TDD)
+- [x] 02-02-PLAN.md — ProfileSwitcher dropdown + CreateProfileDialog + Layout.tsx migration
+- [x] 02-03-PLAN.md — Settings "Meu Perfil" section with edit + delete flows
+- [x] 02-04-PLAN.md — data/users.ts cleanup + human verification checkpoint
 
 ### Phase 3: UI Redesign + Rest Timer
 **Goal**: The app looks and feels like a premium gym tool with an integrated rest timer
