@@ -7,7 +7,7 @@ import {
   PlayCircle,
   Plus,
   RefreshCw,
-  Timer,
+  Settings2,
 } from 'lucide-react';
 import { computeTargetsForWeek, focusLabels, formatTargetText, getWeekInfo } from '@/lib/program';
 import { cn } from '@/lib/utils';
@@ -15,8 +15,10 @@ import { getCurrentWeekNumber } from '@/lib/date';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
 import type { ExerciseLog, SetEntry, SessionType } from '@/types';
-import { parseRestDuration, formatRestClock } from '@/lib/rest';
 import { useDraftAutosave } from '@/hooks/useDraftAutosave';
+import { useRestTimer } from '@/hooks/useRestTimer';
+import { RestTimerCard } from '@/components/RestTimerCard';
+import { ExerciseRestSheet } from '@/components/ExerciseRestSheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,26 +45,14 @@ type ExerciseState = {
 
 type SessionFooterProps = {
   progress: { total: number; completed: number; percent: number };
-  restRunning: boolean;
-  restSeconds: number;
-  defaultRestText?: string;
-  onStartRest: (restText?: string) => void;
-  onResetRest: () => void;
   onFinish: () => void;
   onBack: () => void;
-  formatClock: (seconds: number) => string;
 };
 
 const SessionFooter = memo(function SessionFooter({
   progress,
-  restRunning,
-  restSeconds,
-  defaultRestText,
-  onStartRest,
-  onResetRest,
   onFinish,
   onBack,
-  formatClock,
 }: SessionFooterProps) {
   return (
     <div className='sticky bottom-0 z-10'>
@@ -83,45 +73,12 @@ const SessionFooter = memo(function SessionFooter({
               />
             </div>
           </div>
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='secondary'
-              size='sm'
-              onClick={() => onStartRest(defaultRestText)}
-            >
-              <Timer className='mr-2 h-4 w-4' />
-              {restRunning ? formatClock(restSeconds) : 'Iniciar descanso'}
-            </Button>
-            <div className='flex items-center gap-1'>
-              {[60, 90, 120].map((preset) => (
-                <Button
-                  key={preset}
-                  variant='ghost'
-                  size='sm'
-                  className='px-2 text-xs'
-                  onClick={() => onStartRest(String(preset))}
-                  aria-label={`Iniciar ${preset} segundos de descanso`}
-                >
-                  {preset / 60}m
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={onResetRest}
-              disabled={!restSeconds}
-            >
-              Limpar
-            </Button>
-          </div>
           <div className='flex flex-wrap gap-2'>
             <Button onClick={onFinish} size='lg'>
               <Check className='mr-2 h-5 w-5' />
               Finalizar sessão
             </Button>
             <Button variant='secondary' onClick={onBack}>
-              <Timer className='mr-2 h-4 w-4' />
               Voltar
             </Button>
           </div>
@@ -215,17 +172,13 @@ export default function SessionDetail() {
     });
     return map;
   }, [exerciseLogs]);
-  const [restSeconds, setRestSeconds] = useState(0);
-  const [restRunning, setRestRunning] = useState(false);
+  const { active: timerActive, remaining: timerRemaining, duration: timerDuration, start: startTimer, skip: skipTimer } = useRestTimer()
+  const exerciseRestConfig = useWorkoutStore((s) => s.settings.exerciseRestConfig)
+  const defaultRestSeconds = useWorkoutStore((s) => s.settings.defaultRestSeconds)
+  const setExerciseRestSeconds = useWorkoutStore((s) => s.setExerciseRestSeconds)
+  const [restSheetExerciseId, setRestSheetExerciseId] = useState<string | null>(null)
+  const [showComplete, setShowComplete] = useState(false)
   const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
-  const startRestTimer = (restText?: string) => {
-    setRestSeconds(parseRestDuration(restText));
-    setRestRunning(true);
-  };
-  const resetRestTimer = () => {
-    setRestRunning(false);
-    setRestSeconds(0);
-  };
   const scrollToNextSet = () => {
     if (!session) return;
     for (const ex of session.exercises) {
@@ -309,18 +262,12 @@ export default function SessionDetail() {
   }, [initialExerciseState, draftKey]);
 
   useEffect(() => {
-    if (!restRunning || restSeconds <= 0) return;
-    const interval = window.setInterval(() => {
-      setRestSeconds((prev) => {
-        if (prev <= 1) {
-          setRestRunning(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [restRunning, restSeconds]);
+    if (!timerActive && timerDuration > 0 && timerRemaining === 0) {
+      setShowComplete(true)
+      const timeout = setTimeout(() => setShowComplete(false), 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [timerActive, timerDuration, timerRemaining])
 
   const { lastSavedAt } = useDraftAutosave(draftKey, exerciseState, {
     delayMs: 500,
@@ -379,6 +326,11 @@ export default function SessionDetail() {
       return { ...prev, [exerciseId]: { ...current, sets: nextSets } };
     });
     setHasUnsaved(true);
+    // Auto-start rest timer on set completion (D-11, LOG-05)
+    if (field === 'completed' && value === true) {
+      const restSecs = (exerciseRestConfig && exerciseRestConfig[exerciseId]) ?? defaultRestSeconds ?? 90
+      startTimer(restSecs)
+    }
   };
 
   const adjustSetValue = (
@@ -725,6 +677,15 @@ export default function SessionDetail() {
                       settings.recoveryExcellent && (
                         <Badge variant='success'>+1 série ativa</Badge>
                       )}
+                    <button
+                      type='button'
+                      className='ml-auto p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted hover:text-foreground transition'
+                      onClick={() => setRestSheetExerciseId(exercise.id)}
+                      aria-label='Configurar descanso'
+                      title='Configurar descanso'
+                    >
+                      <Settings2 className='h-5 w-5' />
+                    </button>
                   </div>
                   <CardDescription className='flex flex-wrap gap-3 text-xs'>
                     <span>{exercise.rest} de descanso</span>
@@ -751,15 +712,6 @@ export default function SessionDetail() {
                         </a>
                       </Button>
                     )}
-                    <Button
-                      variant='secondary'
-                      size='sm'
-                      className='h-9 gap-2 px-3'
-                      onClick={() => startRestTimer(exercise.rest)}
-                    >
-                      <Timer className='h-4 w-4' />
-                      Descanso
-                    </Button>
                     {lastLogAvailable && (
                       <Button
                         variant='secondary'
@@ -1088,16 +1040,29 @@ export default function SessionDetail() {
         })}
       </div>
 
+      {(timerActive || showComplete) && (
+        <div className='fixed bottom-[88px] left-1/2 -translate-x-1/2 z-30 w-[90vw] max-w-sm'>
+          <RestTimerCard
+            remaining={timerRemaining}
+            duration={timerDuration}
+            onSkip={skipTimer}
+          />
+        </div>
+      )}
       <SessionFooter
         progress={progress}
-        restRunning={restRunning}
-        restSeconds={restSeconds}
-        defaultRestText={session.exercises[0]?.rest}
-        onStartRest={startRestTimer}
-        onResetRest={resetRestTimer}
         onFinish={finishSession}
         onBack={navigateBack}
-        formatClock={formatRestClock}
+      />
+      <ExerciseRestSheet
+        open={restSheetExerciseId !== null}
+        onOpenChange={(open) => { if (!open) setRestSheetExerciseId(null) }}
+        currentSeconds={restSheetExerciseId ? ((exerciseRestConfig && exerciseRestConfig[restSheetExerciseId]) ?? defaultRestSeconds ?? 90) : (defaultRestSeconds ?? 90)}
+        onSave={(seconds) => {
+          if (restSheetExerciseId) {
+            setExerciseRestSeconds(restSheetExerciseId, seconds)
+          }
+        }}
       />
     </div>
   );
