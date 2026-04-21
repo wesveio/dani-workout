@@ -33,6 +33,8 @@ export type ExerciseLog = {
 export type SettingsState = {
   recoveryExcellent: boolean
   programStart: string
+  defaultRestSeconds: number
+  exerciseRestConfig: Record<string, number>  // exerciseId -> seconds
 }
 
 export type Profile = {

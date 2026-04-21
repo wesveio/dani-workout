@@ -17,6 +17,8 @@ const getCurrentMondayISO = () => {
 const defaultSettings: SettingsState = {
   recoveryExcellent: false,
   programStart: getCurrentMondayISO(),
+  defaultRestSeconds: 90,
+  exerciseRestConfig: {},
 }
 
 const sortWorkouts = (workouts: WorkoutLog[]) =>
@@ -62,6 +64,8 @@ const exerciseLogSchema = z.object({
 const settingsSchema = z.object({
   recoveryExcellent: z.boolean(),
   programStart: z.string(),
+  defaultRestSeconds: z.number().min(10).max(600).optional(),
+  exerciseRestConfig: z.record(z.string(), z.number().min(10).max(600)).optional(),
 })
 
 const profileSchema = z.object({
@@ -127,6 +131,7 @@ type WorkoutStore = {
     exercises: Array<{ exerciseId: string; sets: SetEntry[]; notes?: string }>
   }) => Promise<string>
   saveSettings: (partial: Partial<SettingsState>) => Promise<void>
+  setExerciseRestSeconds: (exerciseId: string, seconds: number) => Promise<void>
   exportData: () => Promise<ExportBundle>
   importData: (data: unknown) => Promise<void>
   reset: () => Promise<void>
@@ -305,6 +310,13 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       const next = { ...get().settings, ...partial }
       await db.settings.put({ key: `user:${activeUserId}`, value: next })
       await db.settings.put({ key: 'app', value: { activeUserId } })
+      set({ settings: next })
+    },
+    setExerciseRestSeconds: async (exerciseId, seconds) => {
+      const { settings, activeUserId } = get()
+      const nextConfig = { ...settings.exerciseRestConfig, [exerciseId]: seconds }
+      const next = { ...settings, exerciseRestConfig: nextConfig }
+      await db.settings.put({ key: `user:${activeUserId}`, value: next })
       set({ settings: next })
     },
     exportData: async () => {
