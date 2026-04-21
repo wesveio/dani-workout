@@ -29,7 +29,7 @@ const sortExerciseLogs = (logs: ExerciseLog[]) =>
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date))
 
-const userIdSchema = z.union([z.literal('dani'), z.literal('wesley')])
+export const userIdSchema = z.string().min(1)
 const setEntrySchema = z.object({
   weight: z.coerce.number().nonnegative(),
   reps: z.coerce.number().nonnegative(),
@@ -64,11 +64,50 @@ const settingsSchema = z.object({
   programStart: z.string(),
 })
 
-const importSchema = z.object({
+const profileSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  shortName: z.string(),
+  avatarInitial: z.string(),
+  avatarColor: z.string(),
+})
+
+const templateSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  name: z.string(),
+  exercises: z.array(z.object({
+    exerciseId: z.string(),
+    defaultSets: z.array(z.object({
+      weight: z.number(),
+      reps: z.number(),
+      completed: z.boolean(),
+    })),
+  })),
+  createdAt: z.string(),
+})
+
+const bodyMetricSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  date: z.string(),
+  weight: z.number().optional(),
+  waist: z.number().optional(),
+  hips: z.number().optional(),
+  chest: z.number().optional(),
+  arms: z.number().optional(),
+  notes: z.string().optional(),
+})
+
+export const importSchema = z.object({
+  formatVersion: z.number().optional().default(1),
   userId: userIdSchema.optional(),
   workouts: z.array(workoutSchema),
   exerciseLogs: z.array(exerciseLogSchema),
   settings: settingsSchema.optional(),
+  profiles: z.array(profileSchema).optional(),
+  templates: z.array(templateSchema).optional(),
+  bodyMetrics: z.array(bodyMetricSchema).optional(),
 })
 
 type WorkoutStore = {
@@ -202,16 +241,23 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
     },
     exportData: async () => {
       const activeUserId = get().activeUserId
-      const [workouts, exerciseLogs, settingsRecord] = await Promise.all([
+      const [workouts, exerciseLogs, settingsRecord, profiles, templates, bodyMetrics] = await Promise.all([
         getUserWorkouts(activeUserId),
         getUserExerciseLogs(activeUserId),
         db.settings.get(`user:${activeUserId}`),
+        db.profiles.where('id').equals(activeUserId).toArray(),
+        db.templates.where('userId').equals(activeUserId).toArray(),
+        db.bodyMetrics.where('userId').equals(activeUserId).toArray(),
       ])
       return {
+        formatVersion: 2,
         userId: activeUserId,
         workouts,
         exerciseLogs,
         settings: (settingsRecord?.value as SettingsState | undefined) ?? get().settings,
+        profiles,
+        templates,
+        bodyMetrics,
       }
     },
     importData: async (data) => {
@@ -231,13 +277,22 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       const settings =
         bundle.settings ??
         ((existingSettings?.value as SettingsState | undefined) ?? defaultSettings)
-      await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, async () => {
+      await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, async () => {
         await db.workouts.where('userId').equals(targetUserId).delete()
         await db.exerciseLogs.where('userId').equals(targetUserId).delete()
         await db.workouts.bulkAdd(workouts)
         await db.exerciseLogs.bulkAdd(exerciseLogs)
         await db.settings.put({ key: `user:${targetUserId}`, value: settings })
         await db.settings.put({ key: 'app', value: { activeUserId: targetUserId } })
+        if (bundle.profiles?.length) {
+          await db.profiles.bulkPut(bundle.profiles)
+        }
+        if (bundle.templates?.length) {
+          await db.templates.bulkPut(bundle.templates)
+        }
+        if (bundle.bodyMetrics?.length) {
+          await db.bodyMetrics.bulkPut(bundle.bodyMetrics)
+        }
       })
       set({
         workouts,
