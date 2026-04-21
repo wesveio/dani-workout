@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import FDBFactory from 'fake-indexeddb/lib/FDBFactory'
-import FDBKeyRange from 'fake-indexeddb/lib/FDBKeyRange'
+import { IDBFactory, IDBKeyRange } from 'fake-indexeddb'
 import { WorkoutDB } from './client'
 
 // Each helper creates a WorkoutDB instance backed by a fresh in-memory IDB,
 // completely isolated from every other test.
 function makeDB() {
-  const indexedDB = new FDBFactory()
-  return new WorkoutDB({ indexedDB, IDBKeyRange: FDBKeyRange })
+  const indexedDB = new IDBFactory()
+  return new WorkoutDB({ indexedDB, IDBKeyRange })
 }
 
 describe('WorkoutDB v4 migration', () => {
@@ -52,8 +51,8 @@ describe('WorkoutDB v4 migration', () => {
   })
 
   it('existing workouts survive migration (zero data loss)', async () => {
-    const indexedDB = new FDBFactory()
-    const dbOptions = { indexedDB, IDBKeyRange: FDBKeyRange }
+    const indexedDB = new IDBFactory()
+    const dbOptions = { indexedDB, IDBKeyRange }
 
     // Open at v3 and insert a workout
     const { Dexie } = await import('dexie')
@@ -85,8 +84,8 @@ describe('WorkoutDB v4 migration', () => {
   })
 
   it('existing exerciseLogs survive migration (zero data loss)', async () => {
-    const indexedDB = new FDBFactory()
-    const dbOptions = { indexedDB, IDBKeyRange: FDBKeyRange }
+    const indexedDB = new IDBFactory()
+    const dbOptions = { indexedDB, IDBKeyRange }
 
     const { Dexie } = await import('dexie')
     const v3db = new Dexie('dani-training-db', dbOptions)
