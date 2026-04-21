@@ -62,8 +62,14 @@ Plans:
   3. All touch targets and typography are sized for one-handed gym use on mobile
   4. Rest timer starts automatically after a set is logged and counts down with a visible ring animation
   5. Vibration and audio alert fire when timer reaches zero, even after phone is locked
-**Plans**: TBD
+**Plans:** 4 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 03-01-PLAN.md — Theme color system overhaul + 5-tab navigation redesign + header simplification
+- [ ] 03-02-PLAN.md — Rest timer hook + audio alert utility (TDD)
+- [ ] 03-03-PLAN.md — Timer UI components + SessionDetail integration + per-exercise rest config
+- [ ] 03-04-PLAN.md — Full suite verification + human visual/functional checkpoint
 
 ### Phase 4: Exercise History + Logging UX
 **Goal**: Users can log sets fast and clearly see how they are progressing on each exercise
@@ -108,7 +114,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/2 | Planning complete | - |
 | 2. Multi-User Profiles | 0/4 | Planning complete | - |
-| 3. UI Redesign + Rest Timer | 0/TBD | Not started | - |
+| 3. UI Redesign + Rest Timer | 0/4 | Planning complete | - |
 | 4. Exercise History + Logging UX | 0/TBD | Not started | - |
 | 5. Workout Templates | 0/TBD | Not started | - |
 | 6. Body Metrics + PWA Safety | 0/TBD | Not started | - |
