@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Types broadening + Dexie v4 schema migration with profile seeding (TDD)
-- [ ] 01-02-PLAN.md — Export/import format versioning + Zod schema broadening (TDD)
+- [x] 01-01-PLAN.md — Types broadening + Dexie v4 schema migration with profile seeding (TDD)
+- [x] 01-02-PLAN.md — Export/import format versioning + Zod schema broadening (TDD)
 
 ### Phase 2: Multi-User Profiles
 **Goal**: Multiple people can use the app on the same device with fully isolated data
