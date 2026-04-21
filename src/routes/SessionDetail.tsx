@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { SetRow } from '@/components/SetRow';
 import dayjs from 'dayjs';
 import {
   AlertCircle,
@@ -10,7 +11,6 @@ import {
   Settings2,
 } from 'lucide-react';
 import { computeTargetsForWeek, focusLabels, formatTargetText, getWeekInfo } from '@/lib/program';
-import { cn } from '@/lib/utils';
 import { getCurrentWeekNumber } from '@/lib/date';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
@@ -33,7 +33,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
@@ -172,6 +171,18 @@ export default function SessionDetail() {
     });
     return map;
   }, [exerciseLogs]);
+  // bestWeightByExercise — for PR detection (LOG-04)
+  const bestWeightByExercise = useMemo(() => {
+    const map = new Map<string, number>()
+    exerciseLogs.forEach((log) => {
+      const best = log.sets.reduce((max, s) => Math.max(max, s.weight), 0)
+      map.set(log.exerciseId, Math.max(map.get(log.exerciseId) ?? 0, best))
+    })
+    return map
+  }, [exerciseLogs])
+
+  const [prBySet, setPrBySet] = useState<Record<string, boolean[]>>({})
+
   const { active: timerActive, remaining: timerRemaining, duration: timerDuration, start: startTimer, skip: skipTimer } = useRestTimer()
   const exerciseRestConfig = useWorkoutStore((s) => s.settings.exerciseRestConfig)
   const defaultRestSeconds = useWorkoutStore((s) => s.settings.defaultRestSeconds)
@@ -330,6 +341,34 @@ export default function SessionDetail() {
     if (field === 'completed' && value === true) {
       const restSecs = (exerciseRestConfig && exerciseRestConfig[exerciseId]) ?? defaultRestSeconds ?? 90
       startTimer(restSecs)
+
+      // PR detection (LOG-04)
+      const currentSet = exerciseState[exerciseId]?.sets[setIndex]
+      const best = bestWeightByExercise.get(exerciseId) ?? 0
+      if (currentSet && currentSet.weight > best) {
+        setPrBySet((prevPr) => {
+          const exercisePrs = [...(prevPr[exerciseId] ?? [])]
+          exercisePrs[setIndex] = true
+          return { ...prevPr, [exerciseId]: exercisePrs }
+        })
+      }
+
+      // Auto-advance focus (LOG-03) — scans all exercises in session order
+      requestAnimationFrame(() => {
+        if (!session) return
+        for (const ex of session.exercises) {
+          const state = exerciseState[ex.id]
+          if (!state) continue
+          for (let i = 0; i < state.sets.length; i++) {
+            if (!state.sets[i].completed) {
+              if (ex.id !== exerciseId || i > setIndex) {
+                document.getElementById(`set-input-${ex.id}-${i}`)?.focus()
+                return
+              }
+            }
+          }
+        }
+      })
     }
   };
 
@@ -791,219 +830,19 @@ export default function SessionDetail() {
                             {setsForTarget.map((set, idx) => {
                               const absoluteIndex = startIndex + idx;
                               return (
-                                <div
+                                <SetRow
                                   key={`${exercise.id}-set-${absoluteIndex}`}
-                                  className='grid grid-cols-2 sm:grid-cols-12 items-center gap-2 rounded-lg border border-neutral/10 bg-card px-3 py-2'
-                                >
-                                  <div className='col-span-2 sm:col-span-3 text-xs font-semibold'>
-                                    Série {absoluteIndex + 1}
-                                  </div>
-                                  <div className='col-span-2 sm:col-span-3'>
-                                    <Label className='text-[11px]'>Carga</Label>
-                                    <Input
-                                      aria-label={`${exercise.name} série ${
-                                        absoluteIndex + 1
-                                      } carga`}
-                                      type='text'
-                                      inputMode='decimal'
-                                      value={set.weight}
-                                      onChange={(e) => {
-                                        const validated = validateNumericInput(
-                                          e.target.value,
-                                          true
-                                        );
-                                        handleSetChange(
-                                          exercise.id,
-                                          absoluteIndex,
-                                          'weight',
-                                          validated === ''
-                                            ? 0
-                                            : Number(validated)
-                                        );
-                                      }}
-                                    />
-                                    <div className='mt-1 flex gap-1 text-[11px]'>
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2'
-                                        onClick={() =>
-                                          adjustSetValue(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'weight',
-                                            -2.5
-                                          )
-                                        }
-                                      >
-                                        -2.5
-                                      </Button>
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2'
-                                        onClick={() =>
-                                          adjustSetValue(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'weight',
-                                            2.5
-                                          )
-                                        }
-                                      >
-                                        +2.5
-                                      </Button>
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2'
-                                        onClick={() =>
-                                          adjustSetValue(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'weight',
-                                            5
-                                          )
-                                        }
-                                      >
-                                        +5
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <div className='col-span-2 sm:col-span-2'>
-                                    <Label className='text-[11px]'>
-                                      {unitLabelDisplay}
-                                    </Label>
-                                    <Input
-                                      aria-label={`${exercise.name} série ${
-                                        absoluteIndex + 1
-                                      } ${unitLabel}`}
-                                      type='text'
-                                      inputMode='numeric'
-                                      value={set.reps}
-                                      onChange={(e) => {
-                                        const validated = validateNumericInput(
-                                          e.target.value,
-                                          false
-                                        );
-                                        handleSetChange(
-                                          exercise.id,
-                                          absoluteIndex,
-                                          'reps',
-                                          validated === ''
-                                            ? 0
-                                            : Number(validated)
-                                        );
-                                      }}
-                                    />
-                                    <div className='mt-1 flex gap-1 text-[11px]'>
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2'
-                                        onClick={() =>
-                                          adjustSetValue(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'reps',
-                                            -1
-                                          )
-                                        }
-                                      >
-                                        -1
-                                      </Button>
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2'
-                                        onClick={() =>
-                                          adjustSetValue(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'reps',
-                                            1
-                                          )
-                                        }
-                                      >
-                                        +1
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <div className='col-span-2 sm:col-span-2'>
-                                    <Label className='text-[11px]'>RIR</Label>
-                                    <div className='flex items-center gap-2'>
-                                      <input
-                                        aria-label={`${exercise.name} série ${
-                                          absoluteIndex + 1
-                                        } RIR`}
-                                        type='range'
-                                        min={0}
-                                        max={5}
-                                        step={1}
-                                        value={set.rir}
-                                        onChange={(e) =>
-                                          handleSetChange(
-                                            exercise.id,
-                                            absoluteIndex,
-                                            'rir',
-                                            Number(e.target.value)
-                                          )
-                                        }
-                                      />
-                                      <span className='text-xs font-semibold w-6 text-center'>
-                                        {set.rir}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className='col-span-2 sm:col-span-2 flex items-center gap-2'>
-                                    <Button
-                                      type='button'
-                                      variant='default'
-                                      size='sm'
-                                      className={cn(
-                                        'h-9 px-3 text-xs font-semibold',
-                                        set.completed
-                                          ? ''
-                                          : 'opacity-80 hover:opacity-100'
-                                      )}
-                                      aria-label={`${exercise.name} série ${
-                                        absoluteIndex + 1
-                                      } concluída`}
-                                      aria-pressed={Boolean(set.completed)}
-                                      onClick={() =>
-                                        handleSetChange(
-                                          exercise.id,
-                                          absoluteIndex,
-                                          'completed',
-                                          !set.completed
-                                        )
-                                      }
-                                    >
-                                      {set.completed ? 'Feito' : 'Marcar feito'}
-                                    </Button>
-                                    {absoluteIndex > 0 && (
-                                      <Button
-                                        type='button'
-                                        variant='ghost'
-                                        size='sm'
-                                        className='px-2 text-xs'
-                                        onClick={() =>
-                                          copyPreviousSet(
-                                            exercise.id,
-                                            absoluteIndex
-                                          )
-                                        }
-                                      >
-                                        Copiar anterior
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
+                                  exerciseId={exercise.id}
+                                  absoluteIndex={absoluteIndex}
+                                  set={set}
+                                  previousSet={lastLogsByExercise.get(exercise.id)?.sets[absoluteIndex]}
+                                  unitLabel={unitLabel}
+                                  unitLabelDisplay={unitLabelDisplay}
+                                  hasPr={prBySet[exercise.id]?.[absoluteIndex] ?? false}
+                                  onSetChange={(field, value) => handleSetChange(exercise.id, absoluteIndex, field, value)}
+                                  onAdjust={(field, delta) => adjustSetValue(exercise.id, absoluteIndex, field, delta)}
+                                  onCopyPrevious={() => copyPreviousSet(exercise.id, absoluteIndex)}
+                                />
                               );
                             })}
                           </div>
