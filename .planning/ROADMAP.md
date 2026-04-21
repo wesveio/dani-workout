@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. UserId accepts any string (not just hardcoded literal), existing data is unaffected
   2. Dexie database opens on v4/v5 schema with profiles, templates, and bodyMetrics tables present
   3. Export file includes all new data types and can be re-imported without data loss
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Types broadening + Dexie v4 schema migration with profile seeding (TDD)
+- [ ] 01-02-PLAN.md — Export/import format versioning + Zod schema broadening (TDD)
 
 ### Phase 2: Multi-User Profiles
 **Goal**: Multiple people can use the app on the same device with fully isolated data
@@ -96,7 +100,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/2 | Planning complete | - |
 | 2. Multi-User Profiles | 0/TBD | Not started | - |
 | 3. UI Redesign + Rest Timer | 0/TBD | Not started | - |
 | 4. Exercise History + Logging UX | 0/TBD | Not started | - |
