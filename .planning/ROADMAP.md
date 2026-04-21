@@ -66,10 +66,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 03-01-PLAN.md — Theme color system overhaul + 5-tab navigation redesign + header simplification
-- [ ] 03-02-PLAN.md — Rest timer hook + audio alert utility (TDD)
-- [ ] 03-03-PLAN.md — Timer UI components + SessionDetail integration + per-exercise rest config
-- [ ] 03-04-PLAN.md — Full suite verification + human visual/functional checkpoint
+- [x] 03-01-PLAN.md — Theme color system overhaul + 5-tab navigation redesign + header simplification
+- [x] 03-02-PLAN.md — Rest timer hook + audio alert utility (TDD)
+- [x] 03-03-PLAN.md — Timer UI components + SessionDetail integration + per-exercise rest config
+- [x] 03-04-PLAN.md — Full suite verification + human visual/functional checkpoint
 
 ### Phase 4: Exercise History + Logging UX
 **Goal**: Users can log sets fast and clearly see how they are progressing on each exercise
