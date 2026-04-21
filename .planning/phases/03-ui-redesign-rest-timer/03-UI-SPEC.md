@@ -22,7 +22,7 @@ created: 2026-04-21
 | Preset | not applicable |
 | Component library | Radix UI (via manual shadcn installs: Dialog, Badge, Button, Card, Input, Textarea, etc.) |
 | Icon library | Lucide React ^0.562.0 |
-| Font | Space Grotesk (Google Fonts, weights 400/500/600/700 already imported) |
+| Font | Space Grotesk (Google Fonts, weights 400/600 in use after Phase 3 cleanup) |
 
 Source: RESEARCH.md §Standard Stack, codebase scan of src/components/ui/ and tailwind.config.js.
 
@@ -53,18 +53,27 @@ Source: REQUIREMENTS.md §UI-03, RESEARCH.md §Pitfall 5.
 
 ## Typography
 
+Type system (4 sizes, 2 weights maximum):
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px | 400 | 1.5 |
-| Label | 14px | 500 | 1.4 |
+| Label | 14px | 400 | 1.4 |
 | Heading | 20px | 600 | 1.2 |
-| Display | 28px | 700 | 1.1 |
+| Display | 28px | 600 | 1.1 |
 
 Notes:
 - All sizes use Space Grotesk (already loaded).
-- Timer countdown numerals: 36px, weight 700, line-height 1.0 — exceptions to the 4-size rule for a single presentational element only.
 - Minimum body text on any screen: 14px (Label role) — never below for gym readability.
-- Nav tab labels: 11px, weight 500 (below type scale — icon-only fallback at 320px viewport width if labels overflow).
+
+### Presentational Exceptions
+
+These values are NOT part of the typography system. Each is used by exactly one component and must not be applied elsewhere.
+
+| Element | Size | Weight | Used By |
+|---------|------|--------|---------|
+| Timer countdown numeral | 36px | 600 | `TimerRing` center numeral only |
+| Nav tab label | 11px | 400 | Bottom nav tab labels only (icon-only fallback at 320px viewport width if labels overflow) |
 
 Source: CONTEXT.md D-03 (Claude's discretion), RESEARCH.md §Pitfall 5, UI-03 (mobile-first optimization).
 
@@ -158,7 +167,7 @@ Source: CONTEXT.md D-05, D-07 (two-tap rule), RESEARCH.md §Pattern 5.
 
 **Structure:**
 - Sticky top with `backdrop-blur-md`, height 56px
-- Left: App name "Dani" in Display/28px weight 700 (or current workout name during active session)
+- Left: App name "Dani" in Display/28px weight 600 (or current workout name during active session)
 - Right: `ProfileSwitcher` component (Phase 2, kept, restyled to match new foreground/surface tokens)
 - Background: `background #0D0D0D` with 80% opacity for blur effect
 
@@ -174,9 +183,9 @@ Source: CONTEXT.md D-06, Phase 2 `ProfileSwitcher` must be preserved.
 - Background: secondary `#1A1A1A`, `rounded-xl` (24px), `shadow-soft`
 - Ring: 120×120px SVG, `r=44`, track stroke `rgba(255,255,255,0.1)` width 6, progress arc `#FF8C00` width 6
 - Ring urgency: when remaining ≤ 10s, arc stroke switches to `#FF3D3D`
-- Center of ring: countdown numerals in 36px/700/line-height-1.0, foreground color
-- Below ring: rest label in 14px/500 muted text (e.g., "Descanso")
-- Skip button: `ghost` variant, 44px touch target, positioned bottom-right of card, label "Pular"
+- Center of ring: countdown numerals (presentational exception: 36px/600/line-height-1.0), foreground color
+- Below ring: rest label in 14px/400 muted text (e.g., "Descanso")
+- Skip button: `ghost` variant, 44px touch target, positioned bottom-right of card, label "Pular Descanso"
 - Ring animation: CSS `transition: stroke-dashoffset 0.5s linear` on progress arc
 - On `visibilitychange` return: disable transition class, apply corrected offset, re-enable in next `requestAnimationFrame`
 - Clockwise depletion: SVG rotated `-90deg` so 12 o'clock is start position
@@ -203,6 +212,8 @@ Source: CONTEXT.md D-08 (Claude's discretion — floating card chosen), D-09 (cl
 
 ### Per-Exercise Rest Config
 - Entry point: gear icon (Lucide `Settings2`, 20px) on each exercise card header in SessionDetail
+  - `aria-label="Configurar descanso"` required on the icon button (icon-only control)
+  - Tooltip: "Configurar descanso" shown on hover/focus for pointer users
 - Opens `ExerciseRestSheet` (shadcn Dialog as bottom sheet)
 - Options: pill buttons for "30s", "60s", "90s", "Custom"
 - Custom: numeric input (seconds), 44px height, max 600s enforced
@@ -223,11 +234,12 @@ Source: CONTEXT.md D-08 (Claude's discretion — floating card chosen), D-09 (cl
 | Primary CTA (start workout) | "Iniciar Treino" |
 | Primary CTA (save set) | "Salvar Série" |
 | Rest timer label | "Descanso" |
-| Timer skip button | "Pular" |
+| Timer skip button | "Pular Descanso" |
 | Timer complete state | "Pronto!" |
 | Rest config sheet title | "Tempo de Descanso" |
 | Rest config custom label | "Personalizado" |
-| Rest config save button | "Confirmar" |
+| Rest config save button | "Confirmar Tempo" |
+| Gear icon aria-label | "Configurar descanso" |
 | Empty state (no workouts) | Heading: "Sem treinos ainda" / Body: "Inicie uma sessão para começar a registrar." |
 | Empty state (no history) | Heading: "Nenhum histórico" / Body: "Complete um treino para ver seu progresso aqui." |
 | Error state (timer init fail) | Silent fail — no copy shown; audio-only fallback handles alert |
