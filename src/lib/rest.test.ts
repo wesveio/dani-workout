@@ -26,3 +26,12 @@ describe('formatRestClock', () => {
     expect(formatRestClock(90)).toBe('01:30')
   })
 })
+
+describe('parseRestDuration 600s cap', () => {
+  it('caps duration at 600 seconds', () => {
+    expect(parseRestDuration('999')).toBe(600)
+  })
+  it('caps minutes conversion at 600 seconds', () => {
+    expect(parseRestDuration('15 min')).toBe(600)
+  })
+})
