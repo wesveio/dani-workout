@@ -4,14 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#161616',
-        foreground: '#F7F7F5',
-        surface: '#1F1F1F',
-        muted: '#CECECE',
-        accent: '#4EFF74',
-        accentSecondary: '#4495FF',
-        neutral: '#2C2C2C',
-        card: '#1F1F1F',
+        background: '#0D0D0D',
+        foreground: '#F5F5F3',
+        surface: '#1A1A1A',
+        muted: '#888888',
+        accent: '#FF3D3D',
+        accentSecondary: '#FF8C00',
+        neutral: '#2A2A2A',
+        card: '#1A1A1A',
+        destructive: '#EF4444',
       },
       fontFamily: {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
