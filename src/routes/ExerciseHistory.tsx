@@ -1,22 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { ArrowLeft, PlayCircle, Trophy, TrendingUp } from 'lucide-react'
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { Formatter, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { findExerciseById, focusLabels } from '@/lib/program'
 import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
+import { epley } from '@/lib/epley'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ExerciseProgressChart, type ChartDatum } from '@/components/ExerciseProgressChart'
 import type { ExerciseLog } from '@/types'
-
-type ChartDatum = {
-  date: string
-  volume: number
-  topWeight: number
-}
 
 const computeVolume = (log: ExerciseLog) =>
   log.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0)
@@ -27,6 +22,8 @@ export default function ExerciseHistory() {
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const program = useActiveProgram()
   const exercise = exerciseId ? findExerciseById(program, exerciseId) : undefined
+
+  const [metric, setMetric] = useState<'volume' | 'topWeight' | 'e1rm'>('volume')
 
   const logs = useMemo(
     () =>
@@ -44,21 +41,28 @@ export default function ExerciseHistory() {
         date: dayjs(log.date).format('MMM D'),
         volume: computeVolume(log),
         topWeight: log.sets.reduce((max, set) => Math.max(max, set.weight), 0),
+        e1rm: log.sets.reduce((max, set) => Math.max(max, epley(set.weight, set.reps)), 0),
       })),
     [logs],
   )
 
-  const bestVolume = useMemo(() => Math.max(0, ...chartData.map((d) => d.volume)), [chartData])
-  const bestWeight = useMemo(() => Math.max(0, ...chartData.map((d) => d.topWeight)), [chartData])
-  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
-    const numeric =
-      typeof value === 'number'
-        ? value
-        : Array.isArray(value)
-          ? Number(value[0]) || 0
-          : Number(value) || 0
-    return name === 'topWeight' ? [`${numeric} kg`, 'Melhor carga'] : [Math.round(numeric), 'Volume']
-  }
+  const bestWeight = useMemo(
+    () => logs.reduce((max, log) => Math.max(max, ...log.sets.map((s) => s.weight)), 0),
+    [logs],
+  )
+  const bestVolume = useMemo(
+    () =>
+      logs.reduce(
+        (max, log) => Math.max(max, log.sets.reduce((sum, s) => sum + s.weight * s.reps, 0)),
+        0,
+      ),
+    [logs],
+  )
+  const best1RM = useMemo(
+    () =>
+      logs.reduce((max, log) => Math.max(max, ...log.sets.map((s) => epley(s.weight, s.reps))), 0),
+    [logs],
+  )
 
   if (!exercise) {
     return (
@@ -85,6 +89,29 @@ export default function ExerciseHistory() {
         </div>
       </div>
 
+      {logs.length > 0 && (
+        <div className="rounded-xl bg-[#2A2A2A] p-4 flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-accent" />
+            <div>
+              <div className="text-[12px] text-muted">Melhor carga:</div>
+              <div className="text-base font-semibold">{bestWeight} kg</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-accent" />
+            <div>
+              <div className="text-[12px] text-muted">Maior volume:</div>
+              <div className="text-base font-semibold">{bestVolume}</div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[12px] text-muted">1RM Est. max:</div>
+            <div className="text-base font-semibold">{best1RM} kg</div>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-2">
           <div className="space-y-1">
@@ -104,40 +131,21 @@ export default function ExerciseHistory() {
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
-            <Badge variant="outline">Melhor carga: {bestWeight || '--'} kg</Badge>
-            <Badge variant="outline">Maior volume: {Math.round(bestVolume) || '--'}</Badge>
-          </div>
         </CardHeader>
-        <CardContent className="h-64">
-          {chartData.length === 0 ? (
-            <div className="grid h-full place-items-center text-foreground/80 text-sm">Ainda sem registros.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#18D02E" stopOpacity={0.7} />
-                    <stop offset="95%" stopColor="#18D02E" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #454132', background: '#F2F1EF' }}
-                  formatter={tooltipFormatter}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="volume"
-                  stroke="#18D02E"
-                  fillOpacity={1}
-                  fill="url(#colorVolume)"
-                  strokeWidth={3}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
+        <CardContent>
+          <Tabs value={metric} onValueChange={(v) => setMetric(v as typeof metric)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="volume">Volume</TabsTrigger>
+              <TabsTrigger value="topWeight">Carga</TabsTrigger>
+              <TabsTrigger value="e1rm">1RM Est.</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="h-64">
+            {chartData.length === 0
+              ? <div className="grid h-full place-items-center text-foreground/80 text-sm">Ainda sem registros.</div>
+              : <ExerciseProgressChart chartData={chartData} metric={metric} />
+            }
+          </div>
         </CardContent>
       </Card>
 
@@ -172,15 +180,6 @@ export default function ExerciseHistory() {
           ))}
         </CardContent>
       </Card>
-
-      <div className="flex gap-2">
-        <Badge variant="success" className="flex items-center gap-1 text-xs">
-          <Trophy className="h-4 w-4" /> Melhor carga {bestWeight || '--'} kg
-        </Badge>
-        <Badge variant="outline" className="flex items-center gap-1 text-xs">
-          <TrendingUp className="h-4 w-4" /> Maior volume {Math.round(bestVolume) || '--'}
-        </Badge>
-      </div>
 
       <Button asChild variant="secondary">
         <Link to="/week">Voltar para semanas</Link>
