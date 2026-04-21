@@ -1,103 +1,57 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
   CalendarDays,
-  Dumbbell,
+  BarChart2,
+  LayoutTemplate,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { getCurrentWeekNumber } from '@/lib/date';
 import { cn } from '@/lib/utils';
-import { useActiveProgram, useActiveUserProfile } from '@/lib/user';
-import { useWorkoutStore } from '@/store/workoutStore';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { useActiveUserProfile } from '@/lib/user';
 import { ProfileSwitcher } from './ProfileSwitcher';
 
 const navItems = [
-  { to: '/', label: 'Início', icon: Home },
-  { to: '/week', label: 'Semana', icon: CalendarDays },
-  { to: '/progress', label: 'Histórico', icon: Dumbbell },
+  { to: '/', label: 'Inicio', icon: Home },
+  { to: '/week', label: 'Treino', icon: CalendarDays },
+  { to: '/progress', label: 'Historico', icon: BarChart2 },
+  { to: '/templates', label: 'Templates', icon: LayoutTemplate },
   { to: '/settings', label: 'Config', icon: SettingsIcon },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const profile = useActiveUserProfile();
-  const program = useActiveProgram();
-  const settings = useWorkoutStore((s) => s.settings);
-  const weekNumber = program
-    ? getCurrentWeekNumber(settings.programStart, program.durationWeeks)
-    : 0;
-  const weekInfo = program?.weeks.find((w) => w.number === weekNumber);
   const isSession = location.pathname.startsWith('/session');
-  const scheduleLabel = program?.schedule.map((day) => day.day.slice(0, 3)).join(' / ') ?? '';
 
   return (
     <div className='min-h-screen bg-background text-foreground'>
       <header
         className={cn(
-          'sticky top-0 z-20 border-b border-neutral/30 bg-background/80 backdrop-blur',
+          'sticky top-0 z-20 border-b border-neutral/30 bg-background/80 backdrop-blur-md',
           isSession && 'py-2'
         )}
-        aria-label='Cabeçalho principal'
+        aria-label='Cabecalho principal'
       >
         <div
           className={cn(
             'mx-auto flex max-w-5xl items-center justify-between px-4',
-            isSession ? 'py-2' : 'py-4'
+            isSession ? 'py-2' : 'py-3'
           )}
         >
           <div className='flex items-center gap-3'>
-            <ProfileSwitcher />
             {isSession ? (
               <div className='leading-tight'>
-                <div className='text-xs uppercase tracking-[0.2em] text-foreground/70'>
-                  Sessão em andamento
+                <div className='text-xs uppercase tracking-[0.2em] text-muted'>
+                  Sessao em andamento
                 </div>
-                {weekInfo && (
-                  <div className='text-sm font-semibold text-foreground'>
-                    Semana {weekNumber} · {weekInfo.phase}
-                  </div>
-                )}
               </div>
             ) : (
-              <div>
-                <div className='text-xs uppercase tracking-[0.2em] text-foreground/70'>
-                  {profile?.name ?? ''}
-                </div>
-                {program && (
-                  <div className='text-lg font-semibold leading-tight text-foreground'>
-                    {program.name}
-                  </div>
-                )}
-                {scheduleLabel && (
-                  <div className='text-xs text-foreground/70'>
-                    {scheduleLabel}
-                  </div>
-                )}
-              </div>
+              <h1 className='text-[28px] font-semibold leading-none text-foreground'>
+                Dani
+              </h1>
             )}
           </div>
-          <div className='flex items-center gap-2'>
-            <div className='hidden items-center gap-2 md:flex'>
-              {!isSession && weekInfo && (
-                <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
-                  Semana {weekNumber}:{' '}
-                  {weekInfo.deload ? 'Deload' : weekInfo.phase}
-                </Badge>
-              )}
-              {!isSession && (
-                <Button
-                  variant='secondary'
-                  size='sm'
-                  onClick={() => navigate('/week')}
-                >
-                  Ver semana
-                </Button>
-              )}
-            </div>
-          </div>
+          <ProfileSwitcher />
         </div>
       </header>
       <main
@@ -111,28 +65,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
       {!isSession && (
         <nav
-          className='fixed bottom-4 left-0 right-0 mx-auto flex max-w-md justify-center px-4 md:hidden'
-          aria-label='Navegação inferior'
+          className='fixed bottom-4 left-0 right-0 mx-auto flex justify-center px-4 md:hidden'
+          aria-label='Navegacao inferior'
         >
-          <div className='flex w-full justify-between rounded-full bg-surface shadow-soft border border-neutral/50 px-2 py-2.5'>
+          <div className='flex w-[calc(100%-32px)] max-w-[360px] justify-between rounded-full bg-surface/95 shadow-soft border border-neutral/50 px-2 py-2 backdrop-blur-md'>
             {navItems.map((item) => {
               const active =
-                location.pathname === item.to ||
-                location.pathname.startsWith(item.to + '/');
+                item.to === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.to);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    'flex flex-1 min-h-[56px] flex-col items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition',
+                    'relative flex flex-1 min-h-[44px] flex-col items-center justify-center gap-1 rounded-full px-1 py-1.5 text-[11px] transition',
                     active
-                      ? 'bg-accent text-background shadow-soft'
+                      ? 'text-foreground'
                       : 'text-muted hover:text-foreground'
                   )}
                 >
                   <Icon className='h-5 w-5' />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {active && (
+                    <span className='absolute bottom-0.5 h-[3px] w-[3px] rounded-full bg-accent' />
+                  )}
                 </Link>
               );
             })}

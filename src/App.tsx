@@ -69,6 +69,14 @@ function App() {
           <Route path="/exercise/:exerciseId" element={<ExerciseHistory />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/templates" element={
+            <div className="grid min-h-[40vh] place-items-center">
+              <div className="text-center space-y-2">
+                <div className="text-lg font-semibold text-foreground">Templates</div>
+                <div className="text-sm text-muted">Em breve</div>
+              </div>
+            </div>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
