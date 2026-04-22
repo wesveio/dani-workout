@@ -3,6 +3,7 @@ import { LayoutTemplate } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TemplateCard } from '@/components/TemplateCard'
 import { TemplateBuilderSheet } from '@/components/TemplateBuilderSheet'
+import { TemplatePreviewSheet } from '@/components/TemplatePreviewSheet'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { toast } from '@/components/ui/use-toast'
 import type { WorkoutTemplate } from '@/types'
@@ -87,6 +88,12 @@ export default function Templates() {
           }
         }}
         initial={editingTemplate ?? undefined}
+      />
+
+      <TemplatePreviewSheet
+        template={previewTemplate}
+        open={!!previewTemplate}
+        onOpenChange={(open) => { if (!open) setPreviewTemplate(null) }}
       />
     </div>
   )

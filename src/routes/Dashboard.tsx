@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { AlertTriangle, ArrowRight, Flame, PlayCircle } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Flame, LayoutTemplate, PlayCircle } from 'lucide-react'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
 import { getSessionTemplate, getWeekInfo } from '@/lib/program'
 import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
+import { TemplatePreviewSheet } from '@/components/TemplatePreviewSheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { WorkoutTemplate } from '@/types'
 
 const formatDay = (day: string) => day.slice(0, 3)
 
@@ -37,6 +40,8 @@ const legend = [
 export default function Dashboard() {
   const workouts = useWorkoutStore((s) => s.workouts)
   const settings = useWorkoutStore((s) => s.settings)
+  const templates = useWorkoutStore((s) => s.templates)
+  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null)
   const program = useActiveProgram()
   const weekNumber = getCurrentWeekNumber(settings.programStart, program.durationWeeks)
   const weekInfo = getWeekInfo(program, weekNumber)
@@ -102,6 +107,22 @@ export default function Dashboard() {
                 </Link>
               </Button>
             </div>
+            {templates.length > 0 && (
+              <div className="space-y-2 mt-2">
+                <div className="text-xs uppercase tracking-[0.2em] text-muted">Templates</div>
+                {templates.map((t) => (
+                  <Button
+                    key={t.id}
+                    variant="secondary"
+                    className="w-full justify-start min-h-[44px]"
+                    onClick={() => setPreviewTemplate(t)}
+                  >
+                    <LayoutTemplate className="mr-2 h-4 w-4" />
+                    {t.name}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex justify-center">
             <div className="relative h-40 w-40">
@@ -231,5 +252,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     </div>
+
+    <TemplatePreviewSheet
+      template={previewTemplate}
+      open={!!previewTemplate}
+      onOpenChange={(open) => { if (!open) setPreviewTemplate(null) }}
+    />
   )
 }
