@@ -14,12 +14,14 @@ import {
 import { WeightTrendChart } from '@/components/WeightTrendChart'
 import { MeasurementsChart } from '@/components/MeasurementsChart'
 import { BodyMetricSheet } from '@/components/BodyMetricSheet'
+import { PhotoGallery } from '@/components/PhotoGallery'
 import type { BodyMetric } from '@/types'
 
 export default function BodyMetrics() {
   const { toast } = useToast()
   const activeUserId = useWorkoutStore((s) => s.activeUserId)
   const entries = useBodyMetricsStore((s) => s.entries)
+  const photos = useBodyMetricsStore((s) => s.photos)
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<BodyMetric | undefined>(undefined)
@@ -147,6 +149,12 @@ export default function BodyMetrics() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Photo gallery */}
+      <div>
+        <div className="text-xs uppercase tracking-[0.2em] text-muted mb-2">Fotos de Progresso</div>
+        <PhotoGallery photos={photos} userId={activeUserId} />
       </div>
 
       {/* Quick-log sheet */}

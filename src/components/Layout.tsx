@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useActiveUserProfile } from '@/lib/user';
 import { ProfileSwitcher } from './ProfileSwitcher';
+import { iOSInstallBanner as IOSInstallBanner } from './iOSInstallBanner';
 
 const navItems = [
   { to: '/', label: 'Inicio', icon: Home },
@@ -66,6 +67,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       {!isSession && (
+        <>
+        <IOSInstallBanner />
         <nav
           className='fixed bottom-4 left-0 right-0 mx-auto flex justify-center px-4 md:hidden'
           aria-label='Navegacao inferior'
@@ -98,6 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
+        </>
       )}
     </div>
   );
