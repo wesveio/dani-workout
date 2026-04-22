@@ -11,6 +11,7 @@ const ExerciseHistory = lazy(() => import('./routes/ExerciseHistory'))
 const Progress = lazy(() => import('./routes/Progress'))
 const Settings = lazy(() => import('./routes/Settings'))
 const Templates = lazy(() => import('./routes/Templates'))
+const BodyMetrics = lazy(() => import('./routes/BodyMetrics'))
 
 function RouteFallback() {
   return (
@@ -71,6 +72,7 @@ function App() {
           <Route path="/progress" element={<Progress />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/templates" element={<Templates />} />
+          <Route path="/corpo" element={<BodyMetrics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

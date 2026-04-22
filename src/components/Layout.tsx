@@ -4,6 +4,7 @@ import {
   CalendarDays,
   BarChart2,
   LayoutTemplate,
+  Scale,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/week', label: 'Treino', icon: CalendarDays },
   { to: '/progress', label: 'Historico', icon: BarChart2 },
   { to: '/templates', label: 'Templates', icon: LayoutTemplate },
+  { to: '/corpo', label: 'Corpo', icon: Scale },
   { to: '/settings', label: 'Config', icon: SettingsIcon },
 ];
 
@@ -80,7 +82,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    'relative flex flex-1 min-h-[44px] flex-col items-center justify-center gap-1 rounded-full px-1 py-1.5 text-[11px] transition',
+                    'relative flex flex-1 min-h-[44px] flex-col items-center justify-center gap-1 rounded-full px-0.5 py-1.5 text-[11px] transition',
                     active
                       ? 'text-foreground'
                       : 'text-muted hover:text-foreground'
