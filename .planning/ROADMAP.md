@@ -98,7 +98,13 @@ Plans:
   2. User can save any completed workout as a reusable template
   3. User can start a new workout session from a saved template with one tap
   4. User can edit, duplicate, and delete saved templates
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Exercise catalog extraction + WorkoutTemplate type extension + store CRUD actions (TDD)
+- [ ] 05-02-PLAN.md — Templates page + TemplateCard + ExercisePicker + TemplateBuilderSheet
+- [ ] 05-03-PLAN.md — Save-from-workout flow + start-from-template flow + TemplatePreviewSheet
+- [ ] 05-04-PLAN.md — Full suite verification + human visual/functional checkpoint
 
 ### Phase 6: Body Metrics + PWA Safety
 **Goal**: Users can track body composition over time and the app is safe to use on iOS Safari
@@ -114,7 +120,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -122,5 +128,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Multi-User Profiles | 0/4 | Planning complete | - |
 | 3. UI Redesign + Rest Timer | 0/4 | Planning complete | - |
 | 4. Exercise History + Logging UX | 0/4 | Planning complete | - |
-| 5. Workout Templates | 0/TBD | Not started | - |
+| 5. Workout Templates | 0/4 | Planning complete | - |
 | 6. Body Metrics + PWA Safety | 0/TBD | Not started | - |
