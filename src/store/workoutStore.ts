@@ -104,6 +104,14 @@ const bodyMetricSchema = z.object({
   notes: z.string().optional(),
 })
 
+const progressPhotoSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  date: z.string(),
+  dataUrl: z.string().min(1),
+  fileSizeBytes: z.number(),
+})
+
 export const importSchema = z.object({
   formatVersion: z.number().optional().default(1),
   userId: userIdSchema.optional(),
@@ -113,6 +121,7 @@ export const importSchema = z.object({
   profiles: z.array(profileSchema).optional(),
   templates: z.array(templateSchema).optional(),
   bodyMetrics: z.array(bodyMetricSchema).optional(),
+  progressPhotos: z.array(progressPhotoSchema).optional(),
 })
 
 type WorkoutStore = {
@@ -336,16 +345,17 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
     },
     exportData: async () => {
       const activeUserId = get().activeUserId
-      const [workouts, exerciseLogs, settingsRecord, profiles, templates, bodyMetrics] = await Promise.all([
+      const [workouts, exerciseLogs, settingsRecord, profiles, templates, bodyMetrics, progressPhotos] = await Promise.all([
         getUserWorkouts(activeUserId),
         getUserExerciseLogs(activeUserId),
         db.settings.get(`user:${activeUserId}`),
         db.profiles.where('id').equals(activeUserId).toArray(),
         db.templates.where('userId').equals(activeUserId).toArray(),
         db.bodyMetrics.where('userId').equals(activeUserId).toArray(),
+        db.progressPhotos.where('userId').equals(activeUserId).toArray(),
       ])
       return {
-        formatVersion: 2,
+        formatVersion: 3,
         userId: activeUserId,
         workouts,
         exerciseLogs,
@@ -353,6 +363,7 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
         profiles,
         templates,
         bodyMetrics,
+        progressPhotos,
       }
     },
     importData: async (data) => {
@@ -374,7 +385,7 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
         ...((existingSettings?.value as SettingsState | undefined) ?? {}),
         ...(bundle.settings ?? {}),
       }
-      await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, async () => {
+      await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, db.progressPhotos, async () => {
         await db.workouts.where('userId').equals(targetUserId).delete()
         await db.exerciseLogs.where('userId').equals(targetUserId).delete()
         await db.workouts.bulkAdd(workouts)
@@ -389,6 +400,9 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
         }
         if (bundle.bodyMetrics?.length) {
           await db.bodyMetrics.bulkPut(bundle.bodyMetrics)
+        }
+        if (bundle.progressPhotos?.length) {
+          await db.progressPhotos.bulkPut(bundle.progressPhotos)
         }
       })
       set({

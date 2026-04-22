@@ -264,7 +264,7 @@ describe('init fallback', () => {
 })
 
 describe('exportData', () => {
-  it('returns object with formatVersion=2', async () => {
+  it('returns object with formatVersion=3', async () => {
     const indexedDB = new IDBFactory()
     const { WorkoutDB } = await import('@/db/client')
     const fakeDb = new WorkoutDB({ indexedDB, IDBKeyRange })
@@ -282,7 +282,7 @@ describe('exportData', () => {
     const store = useWorkoutStore.getState()
 
     const bundle = await store.exportData()
-    expect(bundle.formatVersion).toBe(2)
+    expect(bundle.formatVersion).toBe(3)
 
     fakeDb.close()
     vi.doUnmock('@/db/client')
