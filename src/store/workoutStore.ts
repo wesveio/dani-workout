@@ -282,11 +282,12 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       try {
         const profiles = await db.profiles.toArray()
         if (profiles.length <= 1) return
-        await db.transaction('rw', db.profiles, db.workouts, db.exerciseLogs, db.settings, db.bodyMetrics, db.templates, async () => {
+        await db.transaction('rw', db.profiles, db.workouts, db.exerciseLogs, db.settings, db.bodyMetrics, db.templates, db.progressPhotos, async () => {
           await db.profiles.delete(userId)
           await db.workouts.where('userId').equals(userId).delete()
           await db.exerciseLogs.where('userId').equals(userId).delete()
           await db.bodyMetrics.where('userId').equals(userId).delete()
+          await db.progressPhotos.where('userId').equals(userId).delete()
           await db.templates.where('userId').equals(userId).delete()
           await db.settings.delete(`user:${userId}`)
         })
