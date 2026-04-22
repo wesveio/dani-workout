@@ -6,19 +6,21 @@ export async function compressImage(file: File, targetBytes = 200_000): Promise<
   canvas.height = Math.round(img.height * scale)
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+  const encode = (quality: number) =>
+    new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', quality))
+
+  let blob = await encode(0.8)
+  if (!blob) throw new Error('too-large')
+  if (blob.size > targetBytes) {
+    blob = await encode(0.6)
+  }
+  if (!blob || blob.size > 1_000_000) throw new Error('too-large')
+
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob || blob.size > 1_000_000) {
-          reject(new Error('too-large'))
-          return
-        }
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      },
-      'image/jpeg',
-      0.8
-    )
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('too-large'))
+    reader.readAsDataURL(blob!)
   })
 }
