@@ -49,7 +49,11 @@ export type WorkoutTemplate = {
   id: string
   userId: string
   name: string
-  exercises: Array<{ exerciseId: string; defaultSets: SetEntry[] }>
+  exercises: Array<{
+    exerciseId: string
+    restSeconds?: number
+    defaultSets: SetEntry[]
+  }>
   createdAt: string
 }
 
