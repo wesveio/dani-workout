@@ -21,7 +21,7 @@ created: 2026-04-22
 | Preset | not applicable |
 | Component library | radix-ui (via shadcn: Dialog, Sheet, Tabs, Badge, Button, Card, Input, Label, Textarea, Checkbox, Collapsible, Switch, Dropdown Menu, Toast) |
 | Icon library | Lucide React |
-| Font | Space Grotesk (400, 500, 600, 700) via Google Fonts — already imported in index.css |
+| Font | Space Grotesk (400, 600) via Google Fonts — already imported in index.css |
 
 Source: tailwind.config.js, src/index.css, src/components/ui/ scan, 03-CONTEXT.md
 
@@ -55,14 +55,14 @@ Source: tailwind.config.js (Space Grotesk), 03-CONTEXT.md (D-03 — type scale a
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px | 400 | 1.5 |
-| Label | 14px | 500 | 1.4 |
+| Label | 14px | 400 | 1.4 |
 | Heading | 20px | 600 | 1.2 |
-| Display | 28px | 700 | 1.1 |
+| Display | 28px | 600 | 1.1 |
 
 Notes:
-- Chart axis tick labels: 12px / weight 400 / line-height 1.0 (Recharts ResponsiveContainer constraint)
+- Chart axis tick labels: 14px Label size — use `tick={{ fontSize: 14 }}` on Recharts XAxis/YAxis props
 - Numeric metric values displayed large (bodyweight, waist cm): 28px Display to communicate precision and progress
-- Storage usage indicator text: 14px Label weight 500, color muted (#888888)
+- Storage usage indicator text: 14px Label weight 400, color muted (#888888)
 
 ---
 
@@ -80,6 +80,9 @@ Source: tailwind.config.js — all tokens already defined and locked by Phase 3.
 | Neutral | #2A2A2A | Dividers, input borders, collapsible section borders |
 | Destructive | #EF4444 | Delete entry confirmation button only |
 | Foreground | #F5F5F3 | All body text, headings, input values |
+| Chart Line 2 | #4EFF74 | Measurements chart — Quadril line only |
+| Chart Line 3 | #4495FF | Measurements chart — Peitoral line only |
+| Chart Line 4 | #A78BFA | Measurements chart — Braços line only |
 
 Accent (#FF3D3D) reserved for:
 - Primary CTA button ("Salvar Peso", "Salvar Medidas") fill
@@ -90,6 +93,10 @@ Accent (#FF3D3D) reserved for:
 Accent Secondary (#FF8C00) reserved for:
 - Secondary chart lines on measurements chart (waist line)
 - iOS install banner background tint or left border accent stripe
+
+Chart Line 2/3/4 reserved for:
+- Measurements chart lines only (Quadril, Peitoral, Braços respectively)
+- Do not use outside chart context
 
 Do not apply accent to: input focus rings (use neutral #2A2A2A at 60% opacity), disabled buttons, informational text.
 
@@ -152,7 +159,7 @@ Structure (top to bottom, full mobile viewport):
 
 - 3-column grid, gap: 8px (sm token)
 - Thumbnail: 80px × 80px minimum, object-cover, rounded-lg (12px)
-- Date badge: overlaid bottom-left, 12px text, semi-transparent dark background
+- Date badge: overlaid bottom-left, 14px text (Label size), semi-transparent dark background
 - Tap: opens Dialog with full-size image + date + delete option
 - Add photo: first grid cell is an "+ Adicionar" placeholder card (border-dashed, muted color)
 
@@ -224,9 +231,9 @@ Structure (top to bottom, full mobile viewport):
 - Period tabs: switch chart data range without animation flash (data update only)
 - Measurements chart: each body part is a separate Line, color-coded:
   - Cintura: #FF8C00 (accent secondary)
-  - Quadril: #4EFF74 (legacy green, or any distinct color not accent red)
-  - Peitoral: #4495FF (legacy blue)
-  - Braços: #A78BFA (purple — introduce as 5th neutral accent for charts only)
+  - Quadril: #4EFF74 (Chart Line 2)
+  - Peitoral: #4495FF (Chart Line 3)
+  - Braços: #A78BFA (Chart Line 4)
 - Legend: displayed below chart, tap to toggle line visibility
 - Empty chart (no data): show empty state text centered in chart height container, no axes rendered
 
