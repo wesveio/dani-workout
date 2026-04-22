@@ -115,7 +115,13 @@ Plans:
   2. User can log manual body measurements (waist, hips, chest, arms) with date stamps
   3. User can store dated progress photos
   4. iOS Safari users see a persistent banner prompting them to add the app to their home screen
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Data layer: types, Dexie v5 schema, bodyMetricsStore, image compression, iOS detection (TDD)
+- [ ] 06-02-PLAN.md — Body metrics UI: charts, quick-log form, entry list, nav tab, route
+- [ ] 06-03-PLAN.md — Photo gallery with compression + iOS install banner + export/import extension
+- [ ] 06-04-PLAN.md — Integration wiring + full suite verification checkpoint
 
 ## Progress
 
@@ -129,4 +135,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. UI Redesign + Rest Timer | 0/4 | Planning complete | - |
 | 4. Exercise History + Logging UX | 0/4 | Planning complete | - |
 | 5. Workout Templates | 0/4 | Planning complete | - |
-| 6. Body Metrics + PWA Safety | 0/TBD | Not started | - |
+| 6. Body Metrics + PWA Safety | 0/4 | Planning complete | - |
