@@ -60,6 +60,7 @@ export default function Dashboard() {
     : { to: '/week', label: 'Ver semana' }
 
   return (
+    <>
     <div className="space-y-5">
       <Card className="bg-gradient-to-r from-neutral via-surface to-neutral shadow-soft border border-neutral/50">
         <CardContent className="grid gap-4 md:grid-cols-[1.2fr_0.8fr] items-center p-5">
@@ -258,5 +259,6 @@ export default function Dashboard() {
       open={!!previewTemplate}
       onOpenChange={(open) => { if (!open) setPreviewTemplate(null) }}
     />
+    </>
   )
 }
