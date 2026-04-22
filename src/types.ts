@@ -69,6 +69,14 @@ export type BodyMetric = {
   notes?: string
 }
 
+export type ProgressPhoto = {
+  id: string
+  userId: string
+  date: string
+  dataUrl: string
+  fileSizeBytes: number
+}
+
 export type ExportBundle = {
   userId: UserId
   formatVersion: number
@@ -78,4 +86,5 @@ export type ExportBundle = {
   profiles?: Profile[]
   templates?: WorkoutTemplate[]
   bodyMetrics?: BodyMetric[]
+  progressPhotos?: ProgressPhoto[]
 }
