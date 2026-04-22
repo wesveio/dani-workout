@@ -1,9 +1,10 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { SetRow } from '@/components/SetRow';
 import dayjs from 'dayjs';
 import {
   AlertCircle,
+  BookmarkPlus,
   Check,
   PlayCircle,
   Plus,
@@ -14,7 +15,7 @@ import { computeTargetsForWeek, focusLabels, formatTargetText, getWeekInfo } fro
 import { getCurrentWeekNumber } from '@/lib/date';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
-import type { ExerciseLog, SetEntry, SessionType } from '@/types';
+import type { ExerciseLog, SetEntry, SessionType, WorkoutTemplate } from '@/types';
 import { useDraftAutosave } from '@/hooks/useDraftAutosave';
 import { useRestTimer } from '@/hooks/useRestTimer';
 import { RestTimerCard } from '@/components/RestTimerCard';
@@ -33,9 +34,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
+import { exerciseCatalog } from '@/data/exerciseCatalog';
 
 type ExerciseState = {
   sets: SetEntry[];
@@ -129,8 +133,13 @@ const createDefaultSets = (
 
 export default function SessionDetail() {
   const { sessionId, weekNumber: weekParam } = useParams();
-  const sessionType =
-    sessionId === undefined
+  const location = useLocation();
+  const templateId: string | undefined = (location.state as { templateId?: string } | null)?.templateId;
+  const templateExercisesFromState = (location.state as { exercises?: WorkoutTemplate['exercises'] } | null)?.exercises;
+  const isTemplateMode = sessionId === 'template';
+  const sessionType = isTemplateMode
+    ? null
+    : sessionId === undefined
       ? 'A'
       : sessionId === 'A' || sessionId === 'B' || sessionId === 'C'
         ? sessionId
@@ -139,6 +148,7 @@ export default function SessionDetail() {
   const settings = useWorkoutStore((s) => s.settings);
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs);
   const logSession = useWorkoutStore((s) => s.logSession);
+  const saveTemplate = useWorkoutStore((s) => s.saveTemplate);
   const activeUserId = useWorkoutStore((s) => s.activeUserId);
   const navigate = useNavigate();
 
@@ -147,6 +157,8 @@ export default function SessionDetail() {
   >({});
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
   const fallbackWeek = getCurrentWeekNumber(
     settings.programStart,
     program.durationWeeks
@@ -160,7 +172,29 @@ export default function SessionDetail() {
   const session = sessionType
     ? program.sessions.find((item) => item.id === sessionType) ?? null
     : null;
-  const activeSessionType = (session?.id ?? 'A') as SessionType;
+
+  const templateSession = useMemo(() => {
+    if (!isTemplateMode || !templateExercisesFromState) return null;
+    return {
+      id: 'A' as const,
+      title: 'Template',
+      subtitle: 'Treino via Template',
+      exercises: templateExercisesFromState.map((te) => {
+        const catalogEntry = exerciseCatalog.find((e) => e.id === te.exerciseId);
+        return {
+          id: te.exerciseId,
+          name: catalogEntry?.name ?? te.exerciseId,
+          focus: catalogEntry?.focus ?? ('compound' as const),
+          rest: `${te.restSeconds ?? 90}s`,
+          rir: '2',
+          prescriptions: [] as never[],
+        };
+      }),
+    };
+  }, [isTemplateMode, templateExercisesFromState]);
+
+  const effectiveSession = isTemplateMode ? templateSession : session;
+  const activeSessionType = (effectiveSession?.id ?? 'A') as SessionType;
   const weekInfo = getWeekInfo(program, activeWeek);
   const lastLogsByExercise = useMemo(() => {
     const map = new Map<string, ExerciseLog>();
@@ -191,8 +225,8 @@ export default function SessionDetail() {
   const [showComplete, setShowComplete] = useState(false)
   const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
   const scrollToNextSet = () => {
-    if (!session) return;
-    for (const ex of session.exercises) {
+    if (!effectiveSession) return;
+    for (const ex of effectiveSession.exercises) {
       const state = exerciseState[ex.id];
       if (!state) continue;
       const idx = state.sets.findIndex((s) => !s.completed);
@@ -223,20 +257,37 @@ export default function SessionDetail() {
   }, [exerciseState]);
   const targetsByExercise = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeTargetsForWeek>>();
-    if (!session) return map;
-    session.exercises.forEach((exercise) => {
+    if (!effectiveSession) return map;
+    effectiveSession.exercises.forEach((exercise) => {
       map.set(
         exercise.id,
         computeTargetsForWeek(exercise, activeWeek, settings.recoveryExcellent),
       );
     });
     return map;
-  }, [activeWeek, session, settings.recoveryExcellent]);
+  }, [activeWeek, effectiveSession, settings.recoveryExcellent]);
+
+  const generateTemplateName = () => {
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const now = new Date();
+    return `Treino ${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+  };
 
   const initialExerciseState = useMemo(() => {
-    if (!session) return {};
+    if (isTemplateMode && templateExercisesFromState) {
+      const nextState: Record<string, ExerciseState> = {};
+      templateExercisesFromState.forEach((te) => {
+        nextState[te.exerciseId] = {
+          sets: te.defaultSets.map((s) => ({ ...s, completed: false })),
+          notes: '',
+        };
+      });
+      return nextState;
+    }
+    if (!effectiveSession) return {};
     const nextState: Record<string, ExerciseState> = {};
-    session.exercises.forEach((ex) => {
+    effectiveSession.exercises.forEach((ex) => {
       const targets = targetsByExercise.get(ex.id) ?? [];
       const totalSets = targets.reduce((sum, t) => sum + t.targetSets, 0);
       const lastLog = lastLogsByExercise.get(ex.id);
@@ -251,8 +302,10 @@ export default function SessionDetail() {
     });
     return nextState;
   }, [
+    isTemplateMode,
+    templateExercisesFromState,
     lastLogsByExercise,
-    session,
+    effectiveSession,
     targetsByExercise,
   ]);
 
@@ -286,7 +339,7 @@ export default function SessionDetail() {
       hasUnsaved &&
       !celebrating &&
       Object.keys(exerciseState).length > 0 &&
-      Boolean(session),
+      Boolean(effectiveSession),
   });
 
   useEffect(() => {
@@ -355,8 +408,8 @@ export default function SessionDetail() {
 
       // Auto-advance focus (LOG-03) — scans all exercises in session order
       requestAnimationFrame(() => {
-        if (!session) return
-        for (const ex of session.exercises) {
+        if (!effectiveSession) return
+        for (const ex of effectiveSession.exercises) {
           const state = exerciseState[ex.id]
           if (!state) continue
           for (let i = 0; i < state.sets.length; i++) {
@@ -437,8 +490,8 @@ export default function SessionDetail() {
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
-      if (!session) return prev;
-      const exercise = session.exercises.find((e) => e.id === exerciseId);
+      if (!effectiveSession) return prev;
+      const exercise = effectiveSession.exercises.find((e) => e.id === exerciseId);
       if (!exercise) return prev;
       const targets = targetsByExercise.get(exercise.id) ?? [];
       let repRange: [number, number] = [10, 12];
@@ -503,7 +556,7 @@ export default function SessionDetail() {
   };
 
   const finishSession = async () => {
-    if (!session) return;
+    if (!effectiveSession) return;
     try {
       const workoutDate = dayjs().toISOString();
       await logSession({
@@ -541,7 +594,7 @@ export default function SessionDetail() {
     }
   };
 
-  if (!session || hasInvalidWeekParam || !sessionType) {
+  if ((!effectiveSession || hasInvalidWeekParam || !sessionType) && !isTemplateMode) {
     return (
       <Card>
         <CardHeader>
@@ -613,18 +666,69 @@ export default function SessionDetail() {
                 >
                   Continuar na sessão
                 </Button>
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={() => {
+                    setTemplateName(generateTemplateName());
+                    setSaveTemplateOpen(true);
+                  }}
+                >
+                  <BookmarkPlus className='mr-1 h-4 w-4' />
+                  Salvar como Template
+                </Button>
               </div>
             </div>
           </div>
         </div>
       )}
+      <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+        <DialogContent className='bg-surface border-neutral/50 max-w-sm'>
+          <DialogHeader>
+            <DialogTitle>Salvar como Template</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder='Nome do treino...'
+            className='min-h-[44px]'
+          />
+          <div className='flex gap-2 mt-3'>
+            <Button
+              className='flex-1 min-h-[44px]'
+              disabled={!templateName.trim()}
+              onClick={async () => {
+                const templateExercises = Object.entries(exerciseState).map(([exerciseId, state]) => ({
+                  exerciseId,
+                  restSeconds: settings.exerciseRestConfig?.[exerciseId] ?? settings.defaultRestSeconds,
+                  defaultSets: state.sets.map((s) => ({
+                    weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
+                    reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
+                    rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
+                    completed: false,
+                  })),
+                }));
+                await saveTemplate({ userId: activeUserId, name: templateName.trim(), exercises: templateExercises });
+                setSaveTemplateOpen(false);
+                toast({ title: 'Template salvo com sucesso.' });
+              }}
+            >
+              Salvar Template
+            </Button>
+            <Button variant='ghost' className='min-h-[44px]' onClick={() => setSaveTemplateOpen(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <div>
           <div className='text-sm uppercase tracking-[0.2em] text-muted'>
-            Sessão {session.id}
+            Sessão {effectiveSession?.id}
           </div>
           <h1 className='text-2xl font-bold text-foreground'>
-            {session.subtitle}
+            {effectiveSession?.subtitle}
           </h1>
           <div className='text-sm text-foreground/80'>
             Semana {activeWeek} · {weekInfo.phase}
@@ -690,7 +794,7 @@ export default function SessionDetail() {
       </Card>
 
       <div className='space-y-4'>
-        {session.exercises.map((exercise) => {
+        {(effectiveSession?.exercises ?? []).map((exercise) => {
           const targets = targetsByExercise.get(exercise.id) ?? [];
           const state = exerciseState[exercise.id];
           if (!state) return null;
