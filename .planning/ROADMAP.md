@@ -101,10 +101,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Exercise catalog extraction + WorkoutTemplate type extension + store CRUD actions (TDD)
-- [ ] 05-02-PLAN.md — Templates page + TemplateCard + ExercisePicker + TemplateBuilderSheet
-- [ ] 05-03-PLAN.md — Save-from-workout flow + start-from-template flow + TemplatePreviewSheet
-- [ ] 05-04-PLAN.md — Full suite verification + human visual/functional checkpoint
+- [x] 05-01-PLAN.md — Exercise catalog extraction + WorkoutTemplate type extension + store CRUD actions (TDD)
+- [x] 05-02-PLAN.md — Templates page + TemplateCard + ExercisePicker + TemplateBuilderSheet
+- [x] 05-03-PLAN.md — Save-from-workout flow + start-from-template flow + TemplatePreviewSheet
+- [x] 05-04-PLAN.md — Full suite verification + human visual/functional checkpoint
 
 ### Phase 6: Body Metrics + PWA Safety
 **Goal**: Users can track body composition over time and the app is safe to use on iOS Safari
