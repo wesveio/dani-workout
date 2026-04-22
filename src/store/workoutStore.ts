@@ -3,7 +3,7 @@ import Dexie from 'dexie'
 import { z } from 'zod'
 import { db } from '@/db/client'
 import { pickColor } from '@/lib/profile-constants'
-import type { ExerciseLog, ExportBundle, Profile, SettingsState, SetEntry, UserId, WorkoutLog } from '@/types'
+import type { ExerciseLog, ExportBundle, Profile, SettingsState, SetEntry, UserId, WorkoutLog, WorkoutTemplate } from '@/types'
 
 const getCurrentMondayISO = () => {
   const date = new Date()
@@ -82,6 +82,7 @@ const templateSchema = z.object({
   name: z.string(),
   exercises: z.array(z.object({
     exerciseId: z.string(),
+    restSeconds: z.number().optional(),
     defaultSets: z.array(z.object({
       weight: z.number(),
       reps: z.number(),
@@ -117,6 +118,7 @@ export const importSchema = z.object({
 type WorkoutStore = {
   workouts: WorkoutLog[]
   exerciseLogs: ExerciseLog[]
+  templates: WorkoutTemplate[]
   settings: SettingsState
   activeUserId: UserId
   loading: boolean
@@ -135,6 +137,10 @@ type WorkoutStore = {
   exportData: () => Promise<ExportBundle>
   importData: (data: unknown) => Promise<void>
   reset: () => Promise<void>
+  saveTemplate: (payload: Omit<WorkoutTemplate, 'id' | 'createdAt'>) => Promise<string>
+  deleteTemplate: (id: string) => Promise<void>
+  updateTemplate: (id: string, patch: Partial<Pick<WorkoutTemplate, 'name' | 'exercises'>>) => Promise<void>
+  duplicateTemplate: (id: string) => Promise<string>
 }
 
 const makeId = () => {
@@ -157,11 +163,18 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       .reverse()
       .toArray()
 
+  const getUserTemplates = (userId: UserId) =>
+    db.templates
+      .where('userId')
+      .equals(userId)
+      .toArray()
+
   const loadUserData = async (userId: UserId) => {
-    const [workouts, exerciseLogs, settingsRecord] = await Promise.all([
+    const [workouts, exerciseLogs, settingsRecord, templates] = await Promise.all([
       getUserWorkouts(userId),
       getUserExerciseLogs(userId),
       db.settings.get(`user:${userId}`),
+      getUserTemplates(userId),
     ])
     const settings = (settingsRecord?.value as SettingsState | undefined) ?? defaultSettings
     if (!settingsRecord) {
@@ -171,12 +184,14 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       workouts: sortWorkouts(workouts),
       exerciseLogs: sortExerciseLogs(exerciseLogs),
       settings,
+      templates,
     }
   }
 
   return {
     workouts: [],
     exerciseLogs: [],
+    templates: [],
     settings: defaultSettings,
     activeUserId: 'dani',
     loading: true,
@@ -381,6 +396,43 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
         exerciseLogs,
         settings,
         activeUserId: targetUserId,
+      })
+    },
+    saveTemplate: async ({ userId, name, exercises }) => {
+      const id = makeId()
+      const template: WorkoutTemplate = { id, userId, name, exercises, createdAt: new Date().toISOString() }
+      await db.templates.put(template)
+      set((state) => ({ templates: [template, ...state.templates] }))
+      return id
+    },
+    deleteTemplate: async (id) => {
+      try {
+        await db.templates.delete(id)
+        set((state) => ({ templates: state.templates.filter((t) => t.id !== id) }))
+      } catch (err) {
+        console.error(err)
+        set({ error: 'Nao foi possivel remover o template.' })
+      }
+    },
+    updateTemplate: async (id, patch) => {
+      try {
+        const existing = get().templates.find((t) => t.id === id)
+        if (!existing) return
+        const updated = { ...existing, ...patch }
+        await db.templates.put(updated)
+        set((state) => ({ templates: state.templates.map((t) => t.id === id ? updated : t) }))
+      } catch (err) {
+        console.error(err)
+        set({ error: 'Nao foi possivel atualizar o template.' })
+      }
+    },
+    duplicateTemplate: async (id) => {
+      const original = get().templates.find((t) => t.id === id)
+      if (!original) return ''
+      return get().saveTemplate({
+        userId: original.userId,
+        name: `${original.name} (copia)`,
+        exercises: original.exercises,
       })
     },
     reset: async () => {
