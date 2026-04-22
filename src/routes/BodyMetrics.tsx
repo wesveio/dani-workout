@@ -159,6 +159,7 @@ export default function BodyMetrics() {
 
       {/* Quick-log sheet */}
       <BodyMetricSheet
+        key={editingEntry?.id ?? 'new'}
         open={sheetOpen}
         onOpenChange={handleSheetOpenChange}
         initialEntry={editingEntry}
