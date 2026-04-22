@@ -57,17 +57,12 @@ Type system (4 sizes, 2 weights):
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 16px | 400 | 1.5 |
 | Label | 14px | 400 | 1.4 |
+| Body | 16px | 400 | 1.5 |
 | Heading | 20px | 600 | 1.2 |
 | Display | 28px | 600 | 1.1 |
 
-Presentational exceptions (not part of the type system — one component each):
-
-| Element | Size | Weight | Used By |
-|---------|------|--------|---------|
-| Muscle group section header in picker | 11px | 600 uppercase | Exercise picker group headers only |
-| Set count numeral in template preview | 12px | 400 | Set count pill badges on template preview card only |
+All text in the phase uses one of these four sizes. No sub-scale sizes permitted.
 
 Source: Phase 3 UI-SPEC §Typography — inherited unchanged.
 
@@ -154,9 +149,9 @@ Source: CONTEXT.md D-12 (dedicated Templates tab), D-10 (card-based list). Sort 
 ```
 
 - Card background: `#1A1A1A`, `rounded-xl`, `px-4 py-4`
-- Muscle group badges: `#FF8C00` bg at 20% opacity (`rgba(255,140,0,0.2)`), `#FF8C00` text, `rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase`
+- Muscle group badges: `#FF8C00` bg at 20% opacity (`rgba(255,140,0,0.2)`), `#FF8C00` text, `rounded-full px-2 py-0.5 text-[14px] font-semibold uppercase tracking-wide`
 - "Iniciar" button: accent `#FF3D3D`, height 36px, `text-sm` (14px/400), `rounded-lg`
-- Overflow menu icon: `MoreVertical` Lucide icon, 20px, muted color, 44px touch target
+- Overflow menu icon: `MoreVertical` Lucide icon, 20px, muted color, 44px touch target, `aria-label="Opções do template"`
 - Overflow reveals: Edit ("Editar"), Duplicate ("Duplicar"), Delete ("Excluir") — via shadcn DropdownMenu
 
 **Swipe / long-press (CONTEXT.md D-11):** Swipe left on card reveals destructive zone (`#EF4444` bg, `Trash2` icon 20px white, "Excluir" label 14px white). 80px revealed width. Tap zone confirms delete. Long-press on any platform triggers same DropdownMenu as overflow icon.
@@ -181,7 +176,7 @@ Source: CONTEXT.md D-10, D-11.
   - Right: `Plus` icon 20px accent, 44px touch target
   - Divider: `border-b border-neutral/30` between rows
 
-**Muscle group section headers** (when "Todos" tab active): 11px/600 uppercase muted, `px-4 py-2 bg-[#0D0D0D]` sticky within scroll.
+**Muscle group section headers** (when "Todos" tab active): Label 14px/400 muted, `uppercase tracking-widest`, `px-4 py-2 bg-[#0D0D0D]` sticky within scroll.
 
 Source: CONTEXT.md D-06, D-03. Exercise picker layout: Claude's discretion.
 
@@ -227,7 +222,7 @@ Source: CONTEXT.md D-08 (preview + edit before starting), D-09 (pre-fill weights
 **Interaction:**
 1. User taps "Salvar como Template" (ghost button in post-workout summary, `BookmarkPlus` icon 16px prefix).
 2. shadcn `Dialog` opens (centered modal, not bottom sheet — avoids nav occlusion on session screen).
-3. Dialog content: title "Salvar como Template" (Heading 20px/600) + name `Input` pre-filled with auto-generated name (e.g. "Treino Seg, 22 abr") + "Salvar" primary button + "Cancelar" ghost button.
+3. Dialog content: title "Salvar como Template" (Heading 20px/600) + name `Input` pre-filled with auto-generated name (e.g. "Treino Seg, 22 abr") + "Salvar Template" primary button + "Cancelar" ghost button.
 4. On confirm: template saved, Dialog closes, success Toast: "Template salvo com sucesso."
 
 **Auto-name format:** `"Treino {weekday abbr}, {day} {month abbr}"` (Portuguese, e.g. "Treino Seg, 22 abr") — editable before saving.
@@ -279,7 +274,7 @@ Source: CONTEXT.md D-04, D-05 (save-from-workout path). Auto-name strategy: Clau
 | Empty state CTA | "Criar Template" |
 | Save-as-template dialog title | "Salvar como Template" |
 | Save-as-template name placeholder | "Nome do treino..." |
-| Save-as-template confirm button | "Salvar" |
+| Save-as-template confirm button | "Salvar Template" |
 | Save success toast | "Template salvo com sucesso." |
 | Exercise picker title | "Adicionar Exercício" |
 | Exercise picker search placeholder | "Buscar exercício..." |
