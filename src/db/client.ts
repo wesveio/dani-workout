@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { BodyMetric, ExerciseLog, Profile, SettingsState, UserId, WorkoutLog, WorkoutTemplate } from '@/types'
+import type { BodyMetric, ExerciseLog, Profile, ProgressPhoto, SettingsState, UserId, WorkoutLog, WorkoutTemplate } from '@/types'
 
 type ActiveUserState = { activeUserId: UserId }
 type SettingsRecord = {
@@ -14,6 +14,7 @@ export class WorkoutDB extends Dexie {
   profiles!: Table<Profile>
   templates!: Table<WorkoutTemplate>
   bodyMetrics!: Table<BodyMetric>
+  progressPhotos!: Table<ProgressPhoto>
 
   constructor(options?: ConstructorParameters<typeof Dexie>[1]) {
     super('dani-training-db', options)
@@ -69,6 +70,17 @@ export class WorkoutDB extends Dexie {
           { id: 'wesley', name: 'Wesley', shortName: 'Wesley', avatarInitial: 'W', avatarColor: '#2563eb' },
         ])
       })
+
+    this.version(5).stores({
+      workouts: 'id, userId, [userId+date], date, weekNumber, sessionType',
+      exerciseLogs:
+        'id, userId, exerciseId, workoutId, [userId+date], [userId+exerciseId], [userId+exerciseId+date], date, sessionType, weekNumber',
+      settings: '&key',
+      profiles: '&id, name',
+      templates: '&id, userId, [userId+name]',
+      bodyMetrics: '&id, userId, [userId+date], date',
+      progressPhotos: '&id, userId, [userId+date], date',
+    })
 
     // Seed profiles on fresh DB creation (upgrade() does not run on initial create)
     this.on('populate', async (tx) => {

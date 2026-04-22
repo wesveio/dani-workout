@@ -9,21 +9,22 @@ function makeDB() {
   return new WorkoutDB({ indexedDB, IDBKeyRange })
 }
 
-describe('WorkoutDB v4 migration', () => {
-  it('opens at version 4', async () => {
+describe('WorkoutDB v5 migration', () => {
+  it('opens at version 5', async () => {
     const db = makeDB()
     await db.open()
-    expect(db.verno).toBe(4)
+    expect(db.verno).toBe(5)
     db.close()
   })
 
-  it('has all 6 expected tables', async () => {
+  it('has all 7 expected tables', async () => {
     const db = makeDB()
     await db.open()
     const tableNames = db.tables.map((t) => t.name)
     expect(tableNames).toContain('profiles')
     expect(tableNames).toContain('templates')
     expect(tableNames).toContain('bodyMetrics')
+    expect(tableNames).toContain('progressPhotos')
     expect(tableNames).toContain('workouts')
     expect(tableNames).toContain('exerciseLogs')
     expect(tableNames).toContain('settings')
