@@ -80,6 +80,11 @@ body {
   100% { transform: scale(0.95); opacity: 0; }
 }
 
+@keyframes fade-slide-up {
+  0% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
