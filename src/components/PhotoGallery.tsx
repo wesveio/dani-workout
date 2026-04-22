@@ -28,11 +28,14 @@ export function PhotoGallery({ photos, userId }: Props) {
     }).catch(() => {})
   }, [photos.length])
 
+  const quotaToastShown = useRef(false)
+
   useEffect(() => {
-    if (quotaWarning) {
+    if (quotaWarning && !quotaToastShown.current) {
+      quotaToastShown.current = true
       toast({ description: 'Espaco quase cheio. Considere exportar e limpar fotos antigas.' })
     }
-  }, [quotaWarning, toast])
+  }, [quotaWarning]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
