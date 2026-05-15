@@ -11,3 +11,4 @@ export { Sparkline } from './Sparkline';
 export { MiniBars } from './MiniBars';
 export { MetricCard } from './MetricCard';
 export { ProfileRow } from './ProfileRow';
+export { RestTimerOverlay } from './RestTimerOverlay';
