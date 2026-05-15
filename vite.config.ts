@@ -30,11 +30,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Diário de Treinos da Dani',
-        short_name: 'Dani Treinos',
-        description: 'Acompanhamento do plano de 12 semanas da Dani',
-        theme_color: '#DDDCDB',
-        background_color: '#DDDCDB',
+        name: 'TREINO',
+        short_name: 'TREINO',
+        description: 'Diário de treinos offline-first.',
+        theme_color: '#0a0a0a',
+        background_color: '#0a0a0a',
         display: 'standalone',
         icons: [
           {

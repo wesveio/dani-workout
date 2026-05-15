@@ -198,7 +198,7 @@ export default function Settings() {
 
       {/* Version footer */}
       <div className='pt-2 text-center text-[9px] uppercase tracking-[0.18em] text-txt-faint'>
-        Diário Dani · v2.0
+        TREINO · v2.0
       </div>
 
       {/* Reset confirmation dialog */}
