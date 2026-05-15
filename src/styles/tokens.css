@@ -1,0 +1,31 @@
+/* src/styles/tokens.css */
+:root {
+  --bg: #0a0a0a;
+  --bg-1: #111111;
+  --bg-2: #171717;
+  --line: #1f1f1f;
+  --txt: #e5e5e5;
+  --txt-dim: #9ca3af;
+  --txt-faint: #525252;
+  --lime: #a3e635;
+  --amber: #fbbf24;
+  --red: #f87171;
+
+  --r-card: 10px;
+  --r-hero: 14px;
+  --r-thumb: 8px;
+  --r-pill: 9999px;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--txt);
+}
+body {
+  font-family: 'Inter Variable', 'Inter', -apple-system, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  -webkit-font-smoothing: antialiased;
+}
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+.tracking-tight-display { letter-spacing: -1.5px; }
