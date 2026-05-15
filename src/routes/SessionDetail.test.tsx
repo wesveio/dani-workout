@@ -80,7 +80,7 @@ describe('SessionDetail integration', () => {
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalled()
     })
-    expect(screen.getByText(/sessão a/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /fechar sessão/i })).toBeInTheDocument()
 
     confirmSpy.mockRestore()
   })
