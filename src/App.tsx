@@ -19,7 +19,7 @@ function RouteFallback() {
       <Card className="w-[320px]">
         <CardContent className="p-6 text-center">
           <div className="text-sm font-semibold">Carregando tela…</div>
-          <div className="mt-2 text-xs text-foreground/70">Preparando conteúdo</div>
+          <div className="mt-2 text-xs text-txt-dim">Preparando conteúdo</div>
         </CardContent>
       </Card>
     </div>
@@ -37,11 +37,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-background">
+      <div className="grid min-h-screen place-items-center bg-bg">
         <Card className="w-[320px]">
           <CardContent className="p-6 text-center">
             <div className="text-sm font-semibold">Carregando seus dados…</div>
-            <div className="mt-2 text-xs text-foreground/70">Cache offline (IndexedDB)</div>
+            <div className="mt-2 text-xs text-txt-dim">Cache offline (IndexedDB)</div>
           </CardContent>
         </Card>
       </div>
@@ -50,11 +50,11 @@ function App() {
 
   if (error) {
     return (
-      <div className="grid min-h-screen place-items-center bg-background">
-        <Card className="w-[340px] border border-red-400/40 bg-surface">
+      <div className="grid min-h-screen place-items-center bg-bg">
+        <Card className="w-[340px] border border-red-400/40 bg-bg-1">
           <CardContent className="p-6 text-center space-y-2">
             <div className="text-sm font-semibold text-red-200">Erro ao carregar</div>
-            <div className="text-xs text-foreground/80">{error}</div>
+            <div className="text-xs text-txt-dim">{error}</div>
           </CardContent>
         </Card>
       </div>
