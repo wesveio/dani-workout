@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { BottomTabBar } from './redesign/BottomTabBar';
+import { iOSInstallBanner as IOSInstallBanner } from './iOSInstallBanner';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
@@ -14,7 +15,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           {children}
         </main>
-        {!isSession && <BottomTabBar />}
+        {!isSession && (
+          <>
+            <IOSInstallBanner />
+            <BottomTabBar />
+          </>
+        )}
       </div>
     </div>
   );
