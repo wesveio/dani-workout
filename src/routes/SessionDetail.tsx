@@ -123,7 +123,6 @@ const createDefaultSets = (
 export default function SessionDetail() {
   const { sessionId, weekNumber: weekParam } = useParams();
   const location = useLocation();
-  const templateId: string | undefined = (location.state as { templateId?: string } | null)?.templateId;
   const templateExercisesFromState = (location.state as { exercises?: WorkoutTemplate['exercises'] } | null)?.exercises;
   const isTemplateMode = sessionId === 'template';
   const sessionType = isTemplateMode
@@ -150,16 +149,16 @@ export default function SessionDetail() {
   const [templateName, setTemplateName] = useState('');
   const fallbackWeek = getCurrentWeekNumber(
     settings.programStart,
-    program.durationWeeks
+    program?.durationWeeks
   );
   const parsedWeek = weekParam ? Number(weekParam) : fallbackWeek;
   const hasInvalidWeekParam =
     Number.isNaN(parsedWeek) ||
     parsedWeek < 1 ||
-    parsedWeek > program.durationWeeks;
+    parsedWeek > (program?.durationWeeks ?? 12);
   const activeWeek = hasInvalidWeekParam ? fallbackWeek : parsedWeek;
   const session = sessionType
-    ? program.sessions.find((item) => item.id === sessionType) ?? null
+    ? (program?.sessions.find((item) => item.id === sessionType) ?? null)
     : null;
 
   const templateSession = useMemo(() => {
@@ -184,7 +183,7 @@ export default function SessionDetail() {
 
   const effectiveSession = isTemplateMode ? templateSession : session;
   const activeSessionType = (effectiveSession?.id ?? 'A') as SessionType;
-  const weekInfo = getWeekInfo(program, activeWeek);
+  const weekInfo = program ? getWeekInfo(program, activeWeek) : undefined;
   const lastLogsByExercise = useMemo(() => {
     const map = new Map<string, ExerciseLog>();
     exerciseLogs.forEach((log) => {
@@ -486,7 +485,7 @@ export default function SessionDetail() {
           date: workoutDate,
           weekNumber: activeWeek,
           sessionType: activeSessionType,
-          deload: program.deload.weeks.includes(activeWeek),
+          deload: program?.deload.weeks.includes(activeWeek) ?? false,
         },
         exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
           exerciseId,
@@ -535,7 +534,7 @@ export default function SessionDetail() {
   const upcoming = exercises.slice(activeIndex + 1, activeIndex + 3);
 
   const sessionLabel = effectiveSession?.subtitle ?? `Sessão ${effectiveSession?.id ?? ''}`;
-  const sessionSubtitle = `Semana ${activeWeek} · ${weekInfo.phase}`;
+  const sessionSubtitle = `Semana ${activeWeek}${weekInfo ? ` · ${weekInfo.phase}` : ''}`;
 
   const restTarget = activeExercise
     ? ((exerciseRestConfig && exerciseRestConfig[activeExercise.id]) ?? defaultRestSeconds ?? 90)
@@ -729,8 +728,8 @@ export default function SessionDetail() {
                 return targets.map((t) => formatTargetText(t)).join(' · ');
               })()
             }
-            imageUrl={activeExercise.imageUrl}
-            videoUrl={activeExercise.videoUrl}
+            imageUrl={'imageUrl' in activeExercise ? activeExercise.imageUrl : undefined}
+            videoUrl={'videoUrl' in activeExercise ? activeExercise.videoUrl : undefined}
             ratio='16-10'
           />
 
@@ -795,7 +794,7 @@ export default function SessionDetail() {
                 : u.rest;
               return (
                 <div key={u.id} className='flex items-center gap-2.5 rounded-card bg-bg-1 p-2.5 opacity-70'>
-                  <ExerciseThumb src={u.imageUrl} alt={u.name} />
+                  <ExerciseThumb src={'imageUrl' in u ? u.imageUrl : undefined} alt={u.name} />
                   <div className='flex-1'>
                     <div className='text-[13px] font-medium'>{u.name}</div>
                     <div className='mt-0.5 text-[9px] uppercase tracking-[0.15em] text-txt-faint'>

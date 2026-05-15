@@ -21,7 +21,7 @@ export default function ExerciseHistory() {
   const navigate = useNavigate()
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const program = useActiveProgram()
-  const exercise = exerciseId ? findExerciseById(program, exerciseId) : undefined
+  const exercise = exerciseId && program ? findExerciseById(program, exerciseId) : undefined
 
   const [metric, setMetric] = useState<Metric>('topWeight')
 

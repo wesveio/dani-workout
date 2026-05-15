@@ -86,6 +86,7 @@ const templateSchema = z.object({
     defaultSets: z.array(z.object({
       weight: z.number(),
       reps: z.number(),
+      rir: z.number().default(0),
       completed: z.boolean(),
     })),
   })),
@@ -282,7 +283,7 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
       try {
         const profiles = await db.profiles.toArray()
         if (profiles.length <= 1) return
-        await db.transaction('rw', db.profiles, db.workouts, db.exerciseLogs, db.settings, db.bodyMetrics, db.templates, db.progressPhotos, async () => {
+        await db.transaction('rw', [db.profiles, db.workouts, db.exerciseLogs, db.settings, db.bodyMetrics, db.templates, db.progressPhotos], async () => {
           await db.profiles.delete(userId)
           await db.workouts.where('userId').equals(userId).delete()
           await db.exerciseLogs.where('userId').equals(userId).delete()
@@ -386,7 +387,7 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => {
         ...((existingSettings?.value as SettingsState | undefined) ?? {}),
         ...(bundle.settings ?? {}),
       }
-      await db.transaction('rw', db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, db.progressPhotos, async () => {
+      await db.transaction('rw', [db.workouts, db.exerciseLogs, db.settings, db.profiles, db.templates, db.bodyMetrics, db.progressPhotos], async () => {
         await db.workouts.where('userId').equals(targetUserId).delete()
         await db.exerciseLogs.where('userId').equals(targetUserId).delete()
         await db.workouts.bulkAdd(workouts)

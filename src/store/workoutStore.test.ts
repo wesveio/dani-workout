@@ -231,7 +231,6 @@ describe('switchUser guard', () => {
       writable: true,
     })
     const store = useWorkoutStore.getState()
-    store.setState = useWorkoutStore.setState
     const originalUserId = store.activeUserId
     await store.switchUser('other-user')
     expect(useWorkoutStore.getState().activeUserId).toBe(originalUserId)

@@ -26,10 +26,12 @@ export default function Progress() {
 
   const exercises = useMemo(
     () =>
-      program.sessions.flatMap((s) =>
-        s.exercises.map((e) => ({ ...e, group: sessionGroupMap[s.id] ?? 'LEGS' })),
-      ),
-    [program.sessions],
+      program
+        ? program.sessions.flatMap((s) =>
+            s.exercises.map((e) => ({ ...e, group: sessionGroupMap[s.id] ?? 'LEGS' })),
+          )
+        : [],
+    [program],
   )
 
   const logsByExercise = useMemo(() => {

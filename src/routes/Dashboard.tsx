@@ -25,6 +25,8 @@ export default function Dashboard() {
   const profile = useActiveUserProfile()
   const program = useActiveProgram()
 
+  if (!program) return null
+
   const weekNumber = getCurrentWeekNumber(settings.programStart, program.durationWeeks)
   const weekInfo = getWeekInfo(program, weekNumber)
   const today = dayjs()

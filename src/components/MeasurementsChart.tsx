@@ -18,8 +18,6 @@ const LINES = [
   { key: 'arms', label: 'Bracos', color: '#A78BFA' },
 ] as const
 
-type LineKey = (typeof LINES)[number]['key']
-
 export function MeasurementsChart({ entries }: { entries: BodyMetric[] }) {
   const [hidden, setHidden] = useState<string[]>([])
 

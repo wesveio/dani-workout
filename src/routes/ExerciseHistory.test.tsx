@@ -53,7 +53,7 @@ const sampleLogs = [
     notes: '',
     date: dayjs().subtract(7, 'day').toISOString(),
     weekNumber: 1,
-    sessionType: 'A',
+    sessionType: 'A' as const,
     userId: 'dani',
   },
 ]
