@@ -1,5 +1,106 @@
-import type { Exercise, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
-import type { SessionType } from '@/types'
+import dayjs from 'dayjs'
+import type { Exercise, Phase, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
+import type { ExerciseLog, SessionType } from '@/types'
+
+export type DayStateValue = 'done' | 'miss' | 'none'
+
+/**
+ * Returns an array of 7 DayState values (Mon–Sun) for the week containing `weekStart`.
+ * `weekStart` must be a Monday ISO string (YYYY-MM-DD).
+ * A day is 'done' if a workoutDate falls on it, 'miss' if it was scheduled but past with no log,
+ * 'none' otherwise.
+ */
+export const getWeekStates = (
+  logs: Array<{ date: string }>,
+  weekStart: string,
+  scheduledDayIndices: number[], // 0=Mon…6=Sun
+): DayStateValue[] => {
+  const monday = dayjs(weekStart)
+  const today = dayjs().startOf('day')
+  const logDates = new Set(logs.map((l) => l.date.slice(0, 10)))
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = monday.add(i, 'day')
+    const iso = day.format('YYYY-MM-DD')
+    if (logDates.has(iso)) return 'done'
+    if (scheduledDayIndices.includes(i) && day.isBefore(today)) return 'miss'
+    return 'none'
+  })
+}
+
+export type RecentPr = {
+  exerciseId: string
+  exerciseName: string
+  weight: number
+  reps: number
+  /** Last N weekly max weights for sparkline */
+  weeklyMaxes: number[]
+}
+
+/**
+ * Returns the most recently PR'd exercise derived from exerciseLogs.
+ * PR = highest (weight * reps) 1RM estimate per exercise. Returns null if no logs.
+ */
+export const getRecentPr = (
+  exerciseLogs: ExerciseLog[],
+  findName: (id: string) => string | undefined,
+): RecentPr | null => {
+  if (exerciseLogs.length === 0) return null
+
+  // Group by exerciseId
+  const byExercise = new Map<string, ExerciseLog[]>()
+  for (const log of exerciseLogs) {
+    const list = byExercise.get(log.exerciseId) ?? []
+    list.push(log)
+    byExercise.set(log.exerciseId, list)
+  }
+
+  let bestId = ''
+  let bestWeight = 0
+  let bestReps = 0
+  let bestDate = ''
+
+  for (const [id, logs] of byExercise) {
+    for (const log of logs) {
+      for (const set of log.sets) {
+        if (!set.completed) continue
+        if (set.weight > bestWeight || (set.weight === bestWeight && set.reps > bestReps)) {
+          bestId = id
+          bestWeight = set.weight
+          bestReps = set.reps
+          bestDate = log.date
+        }
+      }
+    }
+  }
+
+  if (!bestId) return null
+
+  // Build weekly max weights (up to 8 weeks) for sparkline
+  const logsForBest = byExercise.get(bestId) ?? []
+  const weeklyMap = new Map<string, number>()
+  for (const log of logsForBest) {
+    const weekKey = dayjs(log.date).startOf('week').format('YYYY-MM-DD')
+    const currentMax = weeklyMap.get(weekKey) ?? 0
+    for (const set of log.sets) {
+      if (set.completed && set.weight > currentMax) {
+        weeklyMap.set(weekKey, set.weight)
+      }
+    }
+  }
+  const weeklyMaxes = Array.from(weeklyMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-8)
+    .map(([, v]) => v)
+
+  void bestDate
+  return {
+    exerciseId: bestId,
+    exerciseName: findName(bestId) ?? bestId,
+    weight: bestWeight,
+    reps: bestReps,
+    weeklyMaxes,
+  }
+}
 
 export type ComputedTarget = SetTarget & { targetSets: number }
 
@@ -51,6 +152,9 @@ export const computeTargetsForWeek = (
     }
   })
 }
+
+export const getPhaseForWeek = (program: Program, week: number): Phase | undefined =>
+  program.phases.find((p) => p.weeks.includes(week))
 
 export const formatTargetText = (target: SetTarget) => {
   const setText = target.setRange

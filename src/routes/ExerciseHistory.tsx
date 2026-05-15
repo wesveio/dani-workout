@@ -1,29 +1,29 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { ArrowLeft, PlayCircle, Trophy, TrendingUp } from 'lucide-react'
+import { ChevronLeft, MoreVertical } from 'lucide-react'
 import { findExerciseById, focusLabels } from '@/lib/program'
 import { useActiveProgram } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { epley } from '@/lib/epley'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ExerciseProgressChart, type ChartDatum } from '@/components/ExerciseProgressChart'
+import { Button } from '@/components/ui/button'
+import { ExerciseHero, MiniBars } from '@/components/redesign'
 import type { ExerciseLog } from '@/types'
 
 const computeVolume = (log: ExerciseLog) =>
   log.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0)
+
+type Metric = 'volume' | 'topWeight' | 'e1rm'
 
 export default function ExerciseHistory() {
   const { exerciseId } = useParams()
   const navigate = useNavigate()
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const program = useActiveProgram()
-  const exercise = exerciseId ? findExerciseById(program, exerciseId) : undefined
+  const exercise = exerciseId && program ? findExerciseById(program, exerciseId) : undefined
 
-  const [metric, setMetric] = useState<'volume' | 'topWeight' | 'e1rm'>('volume')
+  const [metric, setMetric] = useState<Metric>('topWeight')
 
   const logs = useMemo(
     () =>
@@ -33,17 +33,6 @@ export default function ExerciseHistory() {
             .filter((log) => log.exerciseId === exercise.id)
             .sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()),
     [exercise, exerciseLogs],
-  )
-
-  const chartData: ChartDatum[] = useMemo(
-    () =>
-      logs.map((log) => ({
-        date: dayjs(log.date).format('MMM D'),
-        volume: computeVolume(log),
-        topWeight: log.sets.reduce((max, set) => Math.max(max, set.weight), 0),
-        e1rm: log.sets.reduce((max, set) => Math.max(max, epley(set.weight, set.reps)), 0),
-      })),
-    [logs],
   )
 
   const bestWeight = useMemo(
@@ -64,6 +53,68 @@ export default function ExerciseHistory() {
     [logs],
   )
 
+  // PR details
+  const prLog = useMemo(() => {
+    let prWeight = 0
+    let prReps = 0
+    let prDate = ''
+    for (const log of logs) {
+      for (const set of log.sets) {
+        if (set.weight > prWeight || (set.weight === prWeight && set.reps > prReps)) {
+          prWeight = set.weight
+          prReps = set.reps
+          prDate = log.date
+        }
+      }
+    }
+    return { prWeight, prReps, prDate: prDate ? dayjs(prDate).format('D MMM YYYY') : '—' }
+  }, [logs])
+
+  // Delta over last 30 days
+  const delta30dLabel = useMemo(() => {
+    const cutoff = dayjs().subtract(30, 'day')
+    const recent = logs.filter((l) => dayjs(l.date).isAfter(cutoff))
+    const older = logs.filter((l) => !dayjs(l.date).isAfter(cutoff))
+    if (recent.length === 0 || older.length === 0) return null
+    const recentMax = recent.reduce(
+      (max, log) => Math.max(max, ...log.sets.map((s) => s.weight)),
+      0,
+    )
+    const olderMax = older.reduce(
+      (max, log) => Math.max(max, ...log.sets.map((s) => s.weight)),
+      0,
+    )
+    if (olderMax === 0) return null
+    const pct = Math.round(((recentMax - olderMax) / olderMax) * 100)
+    return pct >= 0 ? `+${pct}%` : `${pct}%`
+  }, [logs])
+
+  // Series values for MiniBars
+  const seriesFor = (m: Metric): number[] => {
+    if (m === 'topWeight') return logs.map((log) => log.sets.reduce((max, s) => Math.max(max, s.weight), 0))
+    if (m === 'volume') return logs.map((log) => computeVolume(log))
+    return logs.map((log) => log.sets.reduce((max, s) => Math.max(max, epley(s.weight, s.reps)), 0))
+  }
+
+  // Recent logs (last 10, newest first)
+  const recentLogs = useMemo(
+    () =>
+      [...logs]
+        .reverse()
+        .slice(0, 10)
+        .map((log) => ({
+          id: log.id,
+          dateLabel: dayjs(log.date).format('D MMM YYYY'),
+          topWeight: log.sets.reduce((max, s) => Math.max(max, s.weight), 0),
+          topReps: log.sets.reduce(
+            (reps, s, _, arr) =>
+              s.weight === arr.reduce((m, x) => Math.max(m, x.weight), 0) ? s.reps : reps,
+            0,
+          ),
+        })),
+    [logs],
+  )
+
   if (!exercise) {
     return (
       <div className="space-y-3">
@@ -75,115 +126,96 @@ export default function ExerciseHistory() {
     )
   }
 
+  const series = seriesFor(metric)
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="secondary" onClick={() => navigate(-1)} aria-label="Voltar">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-        <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-foreground/70">Exercício</div>
-          <h1 className="text-2xl font-bold">{exercise.name}</h1>
-          <div className="text-sm text-foreground/80">{focusLabels[exercise.focus]} · {exercise.rest} de descanso</div>
-        </div>
-      </div>
+      {/* Top bar */}
+      <header className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} aria-label="Voltar" className="text-txt-faint">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button aria-label="Mais opções" className="text-txt-faint">
+          <MoreVertical className="h-5 w-5" />
+        </button>
+      </header>
 
-      {logs.length > 0 && (
-        <div className="rounded-xl bg-[#2A2A2A] p-4 flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-accent" />
-            <div>
-              <div className="text-[12px] text-muted">Melhor carga:</div>
-              <div className="text-base font-semibold">{bestWeight} kg</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-accent" />
-            <div>
-              <div className="text-[12px] text-muted">Maior volume:</div>
-              <div className="text-base font-semibold">{bestVolume}</div>
-            </div>
-          </div>
-          <div>
-            <div className="text-[12px] text-muted">1RM Est. max:</div>
-            <div className="text-base font-semibold">{best1RM} kg</div>
-          </div>
-        </div>
-      )}
+      {/* Hero */}
+      <ExerciseHero
+        name={exercise.name}
+        prescription={`${focusLabels[exercise.focus]} · ${exercise.rest}`}
+        imageUrl={exercise.imageUrl}
+        videoUrl={exercise.videoUrl ?? undefined}
+        ratio="16-9"
+      />
 
-      <Card>
-        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-          <div className="space-y-1">
-            <CardTitle>Progresso</CardTitle>
-            <CardDescription>Tendência de carga e volume</CardDescription>
-            {exercise.videoUrl && (
-              <Button
-                asChild
-                variant="secondary"
-                size="sm"
-                className="px-3 h-9 gap-2 border-accent text-accent hover:bg-accent hover:text-foreground"
-              >
-                <a href={exercise.videoUrl} target="_blank" rel="noreferrer noopener">
-                  <PlayCircle className="h-4 w-4" />
-                  Ver vídeo do exercício
-                </a>
-              </Button>
+      {/* Metric toggle */}
+      <Tabs value={metric} onValueChange={(v) => setMetric(v as Metric)}>
+        <TabsList>
+          <TabsTrigger value="topWeight">Carga</TabsTrigger>
+          <TabsTrigger value="volume">Volume</TabsTrigger>
+          <TabsTrigger value="e1rm">1RM Est.</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* PR card */}
+      {logs.length > 0 ? (
+        <div className="rounded-card bg-bg-1 p-3.5">
+          <div className="mb-2 flex items-end justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-txt-faint">PR atual</div>
+              <div className="mt-1 text-[32px] font-extralight leading-none">
+                <span className="text-[12px] text-txt-faint">Melhor carga:</span>{' '}
+                <span>{bestWeight}</span>
+                <span className="ml-1 text-sm text-txt-faint">kg</span>
+              </div>
+              <div className="mt-1 text-[11px] text-txt-dim">
+                × {prLog.prReps} reps · {prLog.prDate}
+              </div>
+              <div className="mt-1 text-[11px] text-txt-faint">
+                <span className="text-[12px]">Maior volume:</span>{' '}
+                <span className="font-semibold">{bestVolume}</span>
+              </div>
+              <div className="mt-1 text-[11px] text-txt-faint">
+                1RM Est. max: <span className="font-semibold">{best1RM} kg</span>
+              </div>
+            </div>
+            {delta30dLabel && (
+              <div className="text-[13px] font-medium text-lime">
+                {delta30dLabel}
+                <span className="ml-1 text-txt-faint">/ 30d</span>
+              </div>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={metric} onValueChange={(v) => setMetric(v as typeof metric)}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="volume">Volume</TabsTrigger>
-              <TabsTrigger value="topWeight">Carga</TabsTrigger>
-              <TabsTrigger value="e1rm">1RM Est.</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="h-64">
-            {chartData.length === 0
-              ? <div className="grid h-full place-items-center text-foreground/80 text-sm">Ainda sem registros.</div>
-              : <ExerciseProgressChart chartData={chartData} metric={metric} />
-            }
-          </div>
-        </CardContent>
-      </Card>
+          <MiniBars values={series} current={series.length - 1} height={80} />
+        </div>
+      ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico</CardTitle>
-          <CardDescription>Últimas {logs.length} sessões</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {logs.length === 0 && <div className="text-sm text-foreground/80">Nenhuma entrada ainda.</div>}
-          {logs.map((log) => (
-            <div
-              key={log.id}
-              className="rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">
-                  {dayjs(log.date).format('D MMM, YYYY')} · Sessão {log.sessionType} (Semana {log.weekNumber})
-                </div>
-                <Badge variant="muted">Vol {Math.round(computeVolume(log))}</Badge>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-foreground/80 md:grid-cols-4">
-                {log.sets.map((set, idx) => (
-                  <div key={idx} className="rounded-lg border border-neutral/10 bg-card px-2 py-2">
-                    Série {idx + 1}: {set.weight} kg x {set.reps} @ RIR {set.rir}{' '}
-                    {set.completed ? '✔' : ''}
-                  </div>
-                ))}
-              </div>
-              {log.notes && <div className="mt-2 text-sm text-foreground/80">Notas: {log.notes}</div>}
+      {/* Últimas sessões */}
+      <section>
+        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-txt-faint">
+          Últimas sessões
+        </h2>
+        <div className="rounded-card bg-bg-1">
+          {logs.length === 0 ? (
+            <div className="grid place-items-center py-8 text-sm text-foreground/80">
+              Ainda sem registros.
             </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Button asChild variant="secondary">
-        <Link to="/week">Voltar para semanas</Link>
-      </Button>
+          ) : (
+            recentLogs.map((l) => (
+              <div
+                key={l.id}
+                className="flex items-center justify-between border-b border-line px-3.5 py-3 text-[13px] last:border-0"
+              >
+                <span className="text-txt-faint">{l.dateLabel}</span>
+                <span>
+                  {l.topWeight}kg × {l.topReps}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   )
 }

@@ -1,170 +1,174 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Check, Clock4, Dumbbell } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PhaseStrip, ExerciseThumb, MiniBars } from '@/components/redesign';
 import { getCurrentWeekNumber } from '@/lib/date';
-import { getSessionTemplate } from '@/lib/program';
+import { getSessionTemplate, getPhaseForWeek } from '@/lib/program';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
 export default function WeekView() {
   const settings = useWorkoutStore((s) => s.settings);
   const program = useActiveProgram();
   const workouts = useWorkoutStore((s) => s.workouts);
-  const [week, setWeek] = useState(
-    getCurrentWeekNumber(settings.programStart, program.durationWeeks)
-  );
-  const currentWeek = getCurrentWeekNumber(
-    settings.programStart,
-    program.durationWeeks
-  );
-  const weekInfo = useMemo(
-    () =>
-      program.weeks.find((w) => w.number === week) ?? program.weeks[0],
-    [week, program]
-  );
-  const workoutsByWeek = useMemo(() => {
-    const counts = new Map<number, number>();
-    workouts.forEach((workout) => {
-      counts.set(workout.weekNumber, (counts.get(workout.weekNumber) ?? 0) + 1);
-    });
-    return counts;
-  }, [workouts]);
+  const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs);
+
+  const totalWeeks = program?.durationWeeks ?? 12;
+  const currentWeek = program
+    ? getCurrentWeekNumber(settings.programStart, program.durationWeeks)
+    : 1;
+
+  const [week, setWeek] = useState(currentWeek);
 
   useEffect(() => {
-    // Pré-seleciona sempre a semana atual ao abrir / quando a data inicial muda
     setWeek(currentWeek);
   }, [currentWeek]);
 
-  return (
-    <div className='space-y-4'>
-      <Card>
-        <CardHeader className='gap-2'>
-          <div className='flex flex-wrap items-center gap-3'>
-            <CardTitle className='text-2xl'>Semana {week}</CardTitle>
-            <Badge variant={weekInfo.deload ? 'muted' : 'outline'}>
-              {weekInfo.phase}
-            </Badge>
-          </div>
-          <CardDescription>{weekInfo.emphasis}</CardDescription>
-          {program.deload.weeks.includes(week) && (
-            <div className='flex items-center gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-3 py-2 text-sm text-foreground/90 shadow-inner shadow-neutral/20'>
-              <Clock4 className='h-4 w-4' />
-              {program.deload.guidance}
-            </div>
-          )}
-        </CardHeader>
-        <CardContent className='space-y-3'>
-          <div className='flex gap-2 overflow-x-auto pb-1 no-scrollbar'>
-            {Array.from({ length: program.durationWeeks }).map((_, idx) => {
-              const num = idx + 1;
-              const active = num === week;
-              const isCurrent = num === currentWeek;
-              const completedCount = workoutsByWeek.get(num) ?? 0;
-              const weekCompleted =
-                completedCount >= program.schedule.length;
-              return (
-                <Button
-                  key={num}
-                  variant={active ? 'default' : 'secondary'}
-                  size='sm'
-                  className={cn(
-                    'relative min-w-[44px] rounded-full px-10 ',
-                    weekCompleted && !active && 'border border-accent/60'
-                  )}
-                  onClick={() => setWeek(num)}
-                  aria-label={`Selecionar semana ${num}${
-                    weekCompleted ? ' concluída' : ''
-                  }`}
-                >
-                  <span className='flex items-center gap-1'>
-                    <span className='text-sm font-semibold'>{num}</span>
-                    {weekCompleted && (
-                      <Check
-                        className={cn(
-                          'h-3 w-3',
-                          active ? 'text-background' : 'text-accent'
-                        )}
-                        aria-hidden
-                      />
-                    )}
-                    {isCurrent && (
-                      <span
-                        className={cn(
-                          'text-[11px] font-semibold',
-                          active ? 'text-background' : 'text-accent'
-                        )}
-                      >
-                        agora
-                      </span>
-                    )}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
-          <div className='flex flex-col gap-3'>
-            {program.schedule.map((day) => {
-              const session = getSessionTemplate(program, day.sessionId);
-              return (
-                <Link
-                  key={day.day}
-                  to={`/session/${session.id}/${week}`}
-                  className='group rounded-2xl border border-neutral/40 bg-surface px-4 py-4 shadow-soft transition hover:-translate-y-1 hover:border-accent text-foreground'
-                >
-                  <div className='flex items-center justify-between'>
-                    <Badge variant='muted'>{day.day}</Badge>
-                    <Dumbbell className='h-4 w-4 text-muted group-hover:text-foreground' />
-                  </div>
-                  <div className='mt-2 text-lg font-semibold'>
-                    Sessão {session.id}
-                  </div>
-                  <div className='text-sm text-foreground/80'>
-                    {session.subtitle}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+  // Sessions for the selected week: one entry per schedule day
+  const sessions = useMemo(() => {
+    if (!program) return [];
+    return program.schedule.map((day) => {
+      const session = getSessionTemplate(program, day.sessionId);
+      const weeklyWorkout = workouts.find(
+        (w) => w.weekNumber === week && w.sessionType === session.id
+      );
+      const totalSets = session.exercises.reduce((sum, ex) => {
+        const p = ex.prescriptions.find(
+          (pr) => week >= pr.weekRange[0] && week <= pr.weekRange[1]
+        );
+        const targets = p?.targets ?? ex.prescriptions[0]?.targets ?? [];
+        return sum + targets.reduce((s, t) => s + t.sets, 0);
+      }, 0);
+      const exercisePreviews = session.exercises.map((ex) => ({
+        name: ex.name,
+        imageUrl: ex.imageUrl,
+      }));
+      return {
+        id: `${day.day}-${session.id}`,
+        code: session.id,
+        title: session.title,
+        dayName: day.day,
+        exerciseCount: session.exercises.length,
+        done: !!weeklyWorkout,
+        totalSets,
+        exercisePreviews,
+        isToday: week === currentWeek,
+      };
+    });
+  }, [program, week, workouts, currentWeek]);
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Linha do tempo das fases</CardTitle>
-          <CardDescription>Entenda o foco de cada bloco.</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-3'>
-          {program.phases.map((phase) => (
-            <div
-              key={phase.label + phase.weeks.join('-')}
-              className='flex items-start gap-3 rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft'
-            >
-              <Calendar className='mt-1 h-4 w-4 text-foreground' />
-              <div>
-                <div className='flex items-center gap-2'>
-                  <span className='text-sm font-semibold'>{phase.label}</span>
-                  <Badge variant='outline'>
-                    Semanas {phase.weeks.join(', ')}
-                  </Badge>
-                </div>
-                <div className='text-sm text-foreground/80'>
-                  {phase.description}
-                </div>
-              </div>
-            </div>
+  // Volume per week: sum of weight × reps for completed sets
+  const volumeByWeek = useMemo(() => {
+    return Array.from({ length: totalWeeks }, (_, i) => {
+      const wn = i + 1;
+      const logsForWeek = exerciseLogs.filter((l) => l.weekNumber === wn);
+      return logsForWeek.reduce((total, log) => {
+        return (
+          total +
+          log.sets.reduce((s, set) => {
+            return s + (set.completed ? set.weight * set.reps : 0);
+          }, 0)
+        );
+      }, 0);
+    });
+  }, [exerciseLogs, totalWeeks]);
+
+  if (!program) return null;
+
+  const phases = program.phases;
+
+  return (
+    <div className='space-y-5'>
+      <header className='flex items-end justify-between'>
+        <div>
+          <div className='text-[10px] uppercase tracking-[0.18em] text-txt-faint'>
+            Programa · {totalWeeks} sem.
+          </div>
+          <h1 className='mt-1 text-[22px] font-normal tracking-tight'>
+            Semana <span className='num'>{week}</span>
+          </h1>
+        </div>
+        <div className='flex items-center gap-2 text-txt-faint'>
+          <button
+            onClick={() => setWeek(Math.max(1, week - 1))}
+            aria-label='Semana anterior'
+          >
+            <ChevronLeft className='h-5 w-5' />
+          </button>
+          <span className='num text-sm text-txt'>{String(week).padStart(2, '0')}</span>
+          <button
+            onClick={() => setWeek(Math.min(totalWeeks, week + 1))}
+            aria-label='Próxima semana'
+          >
+            <ChevronRight className='h-5 w-5' />
+          </button>
+        </div>
+      </header>
+
+      <PhaseStrip total={totalWeeks} current={week} />
+      {phases.length > 0 && (
+        <div className='-mt-3 flex justify-between text-[9px] uppercase tracking-[0.15em] text-txt-faint'>
+          {phases.map((p) => (
+            <span key={p.label}>{p.label}</span>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {getPhaseForWeek(program, week) && (
+        <div className='text-xs text-txt-faint'>
+          {getPhaseForWeek(program, week)?.description}
+        </div>
+      )}
+
+      <section>
+        <h2 className='mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-txt-faint'>
+          Sessões
+        </h2>
+        <div className='space-y-2'>
+          {sessions.map((s) => (
+            <Link
+              key={s.id}
+              to={`/session/${s.code}/${week}`}
+              className={`block rounded-[12px] bg-bg-1 p-3.5 ${s.isToday ? 'border border-lime' : ''}`}
+            >
+              <div className='flex items-start justify-between'>
+                <div>
+                  <h3 className='text-base font-medium tracking-tight'>
+                    Treino {s.code} · {s.title}
+                    {s.isToday && <span className='ml-1 text-lime'>●</span>}
+                  </h3>
+                  <div className='mt-1 text-[10px] uppercase tracking-[0.15em] text-txt-faint'>
+                    {s.dayName} · {s.exerciseCount} exercícios
+                    {s.isToday && ' · hoje'}
+                  </div>
+                </div>
+                <span className='rounded-full bg-bg-2 px-2 py-0.5 text-[11px] text-txt-dim'>
+                  {s.done ? '✓ feito' : `${s.totalSets} séries`}
+                </span>
+              </div>
+              <div className='mt-2 flex gap-1 overflow-hidden'>
+                {s.exercisePreviews.slice(0, 6).map((ex, i) => (
+                  <ExerciseThumb key={i} src={ex.imageUrl} alt={ex.name} size='sm' />
+                ))}
+                {s.exercisePreviews.length > 6 && (
+                  <span className='self-center text-[10px] tracking-wider text-txt-faint'>
+                    +{s.exercisePreviews.length - 6}
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className='mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-txt-faint'>
+          Volume semanal
+        </h2>
+        <div className='rounded-card bg-bg-1 p-3.5'>
+          <MiniBars values={volumeByWeek} current={week - 1} />
+        </div>
+      </section>
     </div>
   );
 }

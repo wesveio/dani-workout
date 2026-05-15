@@ -3,24 +3,20 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { SetRow } from '@/components/SetRow';
 import dayjs from 'dayjs';
 import {
-  AlertCircle,
   BookmarkPlus,
   Check,
-  PlayCircle,
-  Plus,
-  RefreshCw,
-  Settings2,
+  MoreVertical,
+  X,
 } from 'lucide-react';
-import { computeTargetsForWeek, focusLabels, formatTargetText, getWeekInfo } from '@/lib/program';
+import { computeTargetsForWeek, formatTargetText, getWeekInfo } from '@/lib/program';
 import { getCurrentWeekNumber } from '@/lib/date';
 import { useActiveProgram } from '@/lib/user';
 import { useWorkoutStore } from '@/store/workoutStore';
 import type { ExerciseLog, SetEntry, SessionType, WorkoutTemplate } from '@/types';
 import { useDraftAutosave } from '@/hooks/useDraftAutosave';
 import { useRestTimer } from '@/hooks/useRestTimer';
-import { RestTimerCard } from '@/components/RestTimerCard';
 import { ExerciseRestSheet } from '@/components/ExerciseRestSheet';
-import { Badge } from '@/components/ui/badge';
+import { ExerciseHero, ExerciseThumb, RestTimerOverlay } from '@/components/redesign';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -29,15 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { exerciseCatalog } from '@/data/exerciseCatalog';
 
@@ -134,7 +123,6 @@ const createDefaultSets = (
 export default function SessionDetail() {
   const { sessionId, weekNumber: weekParam } = useParams();
   const location = useLocation();
-  const templateId: string | undefined = (location.state as { templateId?: string } | null)?.templateId;
   const templateExercisesFromState = (location.state as { exercises?: WorkoutTemplate['exercises'] } | null)?.exercises;
   const isTemplateMode = sessionId === 'template';
   const sessionType = isTemplateMode
@@ -161,16 +149,16 @@ export default function SessionDetail() {
   const [templateName, setTemplateName] = useState('');
   const fallbackWeek = getCurrentWeekNumber(
     settings.programStart,
-    program.durationWeeks
+    program?.durationWeeks
   );
   const parsedWeek = weekParam ? Number(weekParam) : fallbackWeek;
   const hasInvalidWeekParam =
     Number.isNaN(parsedWeek) ||
     parsedWeek < 1 ||
-    parsedWeek > program.durationWeeks;
+    parsedWeek > (program?.durationWeeks ?? 12);
   const activeWeek = hasInvalidWeekParam ? fallbackWeek : parsedWeek;
   const session = sessionType
-    ? program.sessions.find((item) => item.id === sessionType) ?? null
+    ? (program?.sessions.find((item) => item.id === sessionType) ?? null)
     : null;
 
   const templateSession = useMemo(() => {
@@ -195,7 +183,7 @@ export default function SessionDetail() {
 
   const effectiveSession = isTemplateMode ? templateSession : session;
   const activeSessionType = (effectiveSession?.id ?? 'A') as SessionType;
-  const weekInfo = getWeekInfo(program, activeWeek);
+  const weekInfo = program ? getWeekInfo(program, activeWeek) : undefined;
   const lastLogsByExercise = useMemo(() => {
     const map = new Map<string, ExerciseLog>();
     exerciseLogs.forEach((log) => {
@@ -217,28 +205,12 @@ export default function SessionDetail() {
 
   const [prBySet, setPrBySet] = useState<Record<string, boolean[]>>({})
 
-  const { active: timerActive, remaining: timerRemaining, duration: timerDuration, start: startTimer, skip: skipTimer } = useRestTimer()
+  const { active: timerActive, remaining: timerRemaining, start: startTimer, skip: skipTimer } = useRestTimer()
   const exerciseRestConfig = useWorkoutStore((s) => s.settings.exerciseRestConfig)
   const defaultRestSeconds = useWorkoutStore((s) => s.settings.defaultRestSeconds)
   const setExerciseRestSeconds = useWorkoutStore((s) => s.setExerciseRestSeconds)
   const [restSheetExerciseId, setRestSheetExerciseId] = useState<string | null>(null)
-  const [showComplete, setShowComplete] = useState(false)
   const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
-  const scrollToNextSet = () => {
-    if (!effectiveSession) return;
-    for (const ex of effectiveSession.exercises) {
-      const state = exerciseState[ex.id];
-      if (!state) continue;
-      const idx = state.sets.findIndex((s) => !s.completed);
-      if (idx !== -1) {
-        const target = document.getElementById(`exercise-${ex.id}`);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        return;
-      }
-    }
-  };
   const progress = useMemo(() => {
     const totals = Object.values(exerciseState).reduce(
       (acc, ex) => {
@@ -324,14 +296,6 @@ export default function SessionDetail() {
       }
     }
   }, [initialExerciseState, draftKey]);
-
-  useEffect(() => {
-    if (!timerActive && timerDuration > 0 && timerRemaining === 0) {
-      setShowComplete(true)
-      const timeout = setTimeout(() => setShowComplete(false), 2000)
-      return () => clearTimeout(timeout)
-    }
-  }, [timerActive, timerDuration, timerRemaining])
 
   const { lastSavedAt } = useDraftAutosave(draftKey, exerciseState, {
     delayMs: 500,
@@ -470,22 +434,6 @@ export default function SessionDetail() {
     setHasUnsaved(true);
   };
 
-  const validateNumericInput = (
-    value: string,
-    allowDecimal: boolean = false
-  ): string => {
-    if (value === '') return '';
-    const normalized = value.replace(',', '.');
-    if (!allowDecimal) {
-      return normalized.replace(/[^0-9]/g, '');
-    }
-
-    const filtered = normalized.replace(/[^0-9.]/g, '');
-    const [first, ...rest] = filtered.split('.');
-    if (rest.length === 0) return first;
-    return `${first}.${rest.join('')}`;
-  };
-
   const addSet = (exerciseId: string) => {
     setExerciseState((prev) => {
       const current = prev[exerciseId];
@@ -528,33 +476,6 @@ export default function SessionDetail() {
     setHasUnsaved(true);
   };
 
-  const copyLastLog = (exerciseId: string) => {
-    const last = lastLogsByExercise.get(exerciseId);
-    if (!last) return;
-    setHasUnsaved(true);
-    setExerciseState((prev) => {
-      const current = prev[exerciseId];
-      if (!current) return prev;
-      return {
-        ...prev,
-        [exerciseId]: {
-          ...current,
-          sets: last.sets.map((s) => ({ ...s, completed: false })),
-          notes: last.notes ?? '',
-        },
-      };
-    });
-  };
-
-  const handleNotesChange = (exerciseId: string, value: string) => {
-    setHasUnsaved(true);
-    setExerciseState((prev) => {
-      const current = prev[exerciseId];
-      if (!current) return prev;
-      return { ...prev, [exerciseId]: { ...current, notes: value } };
-    });
-  };
-
   const finishSession = async () => {
     if (!effectiveSession) return;
     try {
@@ -564,7 +485,7 @@ export default function SessionDetail() {
           date: workoutDate,
           weekNumber: activeWeek,
           sessionType: activeSessionType,
-          deload: program.deload.weeks.includes(activeWeek),
+          deload: program?.deload.weeks.includes(activeWeek) ?? false,
         },
         exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
           exerciseId,
@@ -593,6 +514,31 @@ export default function SessionDetail() {
       });
     }
   };
+
+  const exercises = useMemo(
+    () => effectiveSession?.exercises ?? [],
+    [effectiveSession],
+  );
+
+  // Determine active exercise index: first exercise with at least one uncompleted set
+  // (must be above the early return to satisfy rules-of-hooks)
+  const activeIndex = useMemo(() => {
+    for (let i = 0; i < exercises.length; i++) {
+      const state = exerciseState[exercises[i].id];
+      if (state && state.sets.some((s) => !s.completed)) return i;
+    }
+    return exercises.length > 0 ? exercises.length - 1 : 0;
+  }, [exercises, exerciseState]);
+
+  const activeExercise = exercises[activeIndex] ?? null;
+  const upcoming = exercises.slice(activeIndex + 1, activeIndex + 3);
+
+  const sessionLabel = effectiveSession?.subtitle ?? `Sessão ${effectiveSession?.id ?? ''}`;
+  const sessionSubtitle = `Semana ${activeWeek}${weekInfo ? ` · ${weekInfo.phase}` : ''}`;
+
+  const restTarget = activeExercise
+    ? ((exerciseRestConfig && exerciseRestConfig[activeExercise.id]) ?? defaultRestSeconds ?? 90)
+    : (defaultRestSeconds ?? 90);
 
   if ((!effectiveSession || hasInvalidWeekParam || !sessionType) && !isTemplateMode) {
     return (
@@ -682,6 +628,7 @@ export default function SessionDetail() {
           </div>
         </div>
       )}
+
       <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
         <DialogContent className='bg-surface border-neutral/50 max-w-sm'>
           <DialogHeader>
@@ -722,276 +669,152 @@ export default function SessionDetail() {
         </DialogContent>
       </Dialog>
 
-      <div className='flex flex-wrap items-center justify-between gap-2'>
-        <div>
-          <div className='text-sm uppercase tracking-[0.2em] text-muted'>
-            Sessão {effectiveSession?.id}
+      {/* Top bar */}
+      <header className='flex items-center justify-between'>
+        <button
+          type='button'
+          onClick={navigateBack}
+          aria-label='Fechar sessão'
+          className='text-txt-faint'
+        >
+          <X className='h-5 w-5' />
+        </button>
+        <div className='text-center'>
+          <div className='text-[10px] uppercase tracking-[0.18em] text-txt-faint'>
+            {sessionLabel}
           </div>
-          <h1 className='text-2xl font-bold text-foreground'>
-            {effectiveSession?.subtitle}
-          </h1>
-          <div className='text-sm text-foreground/80'>
-            Semana {activeWeek} · {weekInfo.phase}
-          </div>
+          <div className='mt-0.5 text-sm font-medium'>{sessionSubtitle}</div>
         </div>
-        <div className='flex flex-wrap gap-2 items-center'>
-          <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
-            {weekInfo.deload ? 'Deload' : 'Semana-alvo'}
-          </Badge>
-          <Button
-            variant='secondary'
-            size='sm'
-            className='hidden sm:flex'
-            onClick={scrollToNextSet}
-          >
-            Ir para próxima série
-          </Button>
-          {hasUnsaved && (
-            <Badge variant='outline' className='text-xs'>
-              {lastSavedAt
-                ? `rascunho salvo ${dayjs(lastSavedAt).format('HH:mm')}`
-                : 'rascunho pendente'}
-            </Badge>
-          )}
+        <button type='button' aria-label='Mais opções' className='text-txt-faint'>
+          <MoreVertical className='h-5 w-5' />
+        </button>
+      </header>
+
+      {hasUnsaved && (
+        <div className='text-center text-[10px] text-txt-faint'>
+          {lastSavedAt
+            ? `rascunho salvo ${dayjs(lastSavedAt).format('HH:mm')}`
+            : 'rascunho pendente'}
         </div>
-      </div>
+      )}
 
-      <Card>
-        <CardHeader className='flex flex-row items-center justify-between'>
-          <div>
-            <CardTitle>Aqueça primeiro</CardTitle>
-            <CardDescription className='text-foreground/80'>
-              {program.warmup.duration}
-            </CardDescription>
-          </div>
-          <Badge variant='outline'>Essencial</Badge>
-        </CardHeader>
-        <CardContent>
-          <Collapsible>
-            <CollapsibleTrigger className='flex w-full items-center justify-between rounded-xl border border-neutral/60 bg-neutral/60 px-4 py-3 text-left text-sm font-semibold shadow-soft'>
-              <span>Ver passos do aquecimento</span>
-              <Plus className='h-4 w-4' />
-            </CollapsibleTrigger>
-            <CollapsibleContent className='mt-3 space-y-2 rounded-xl border border-neutral/40 bg-surface px-4 py-3 text-sm text-foreground/90'>
-              {program.warmup.items.map((item) => (
-                <div key={item} className='flex items-start gap-2'>
-                  <div className='mt-1 h-2 w-2 rounded-full bg-foreground' />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-          {program.deload.weeks.includes(activeWeek) && (
-            <div className='mt-3 flex items-start gap-2 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20'>
-              <AlertCircle className='mt-0.5 h-4 w-4 text-foreground' />
-              <span>
-                Dica de deload: {program.deload.guidance} (
-                {program.deload.reductionNote})
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className='space-y-4'>
-        {(effectiveSession?.exercises ?? []).map((exercise) => {
-          const targets = targetsByExercise.get(exercise.id) ?? [];
-          const state = exerciseState[exercise.id];
-          if (!state) return null;
-          const lastLogAvailable = lastLogsByExercise.get(exercise.id);
-          let cursor = 0;
-          return (
-            <div
-              key={exercise.id}
-              className='relative pl-3'
-              id={`exercise-${exercise.id}`}
-            >
-              <span
-                className='absolute left-0 top-4 h-full w-[3px] rounded-full bg-gradient-to-b from-accent to-accentSecondary opacity-60'
-                aria-hidden
-              />
-              <Card>
-                <CardHeader className='gap-1'>
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <CardTitle>{exercise.name}</CardTitle>
-                    <Badge variant='muted'>{focusLabels[exercise.focus]}</Badge>
-                    {exercise.optionalVolumeBump &&
-                      exercise.optionalVolumeBump.weeks.includes(activeWeek) &&
-                      settings.recoveryExcellent && (
-                        <Badge variant='success'>+1 série ativa</Badge>
-                      )}
-                    <button
-                      type='button'
-                      className='ml-auto p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted hover:text-foreground transition'
-                      onClick={() => setRestSheetExerciseId(exercise.id)}
-                      aria-label='Configurar descanso'
-                      title='Configurar descanso'
-                    >
-                      <Settings2 className='h-5 w-5' />
-                    </button>
-                  </div>
-                  <CardDescription className='flex flex-wrap gap-3 text-xs'>
-                    <span>{exercise.rest} de descanso</span>
-                    <span>{exercise.rir}</span>
-                    {exercise.notes && (
-                      <span className='text-foreground/80'>
-                        {exercise.notes}
-                      </span>
-                    )}
-                    {exercise.videoUrl && (
-                      <Button
-                        asChild
-                        variant='secondary'
-                        size='sm'
-                        className='h-9 gap-2 px-3 border-accent text-accent hover:bg-accent hover:text-foreground'
-                      >
-                        <a
-                          href={exercise.videoUrl}
-                          target='_blank'
-                          rel='noreferrer noopener'
-                        >
-                          <PlayCircle className='h-4 w-4' />
-                          Ver vídeo
-                        </a>
-                      </Button>
-                    )}
-                    {lastLogAvailable && (
-                      <Button
-                        variant='secondary'
-                        size='sm'
-                        className='h-9 gap-2 px-3'
-                        onClick={() => copyLastLog(exercise.id)}
-                      >
-                        <RefreshCw className='h-4 w-4' />
-                        Usar último treino
-                      </Button>
-                    )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3'>
-              {exercise.imageUrl && (
-                <div className='overflow-hidden rounded-xl border border-neutral/40 bg-neutral/70 shadow-soft'>
-                  <img
-                    src={exercise.imageUrl}
-                    alt={`Execução de ${exercise.name}`}
-                    className='h-40 w-full object-cover'
-                    loading='lazy'
-                    onError={(event) => {
-                      event.currentTarget.onerror = null;
-                      event.currentTarget.src = '/thumbs/chest-press.webp';
-                    }}
-                  />
-                </div>
-              )}
-              <div className='flex flex-wrap gap-2 text-xs'>
-                {targets.map((t, idx) => (
-                  <Badge key={idx} variant='outline'>
-                    {t.label ? `${t.label}: ` : ''}
-                    {formatTargetText(t)}
-                        {exercise.optionalVolumeBump &&
-                          exercise.optionalVolumeBump.weeks.includes(
-                            activeWeek
-                          ) &&
-                          settings.recoveryExcellent &&
-                          idx === 0 && (
-                            <span className='ml-1 text-[10px]'>(+1 série)</span>
-                          )}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className='space-y-2'>
-                    {targets.map((target, targetIdx) => {
-                      const setsForTarget = state.sets.slice(
-                        cursor,
-                        cursor + target.targetSets
-                      );
-                      const startIndex = cursor;
-                      cursor += target.targetSets;
-                      const unitLabel = target.label
-                        ?.toLowerCase()
-                        .includes('segundo')
-                        ? 'segundos'
-                        : 'repetições';
-                      const unitLabelDisplay =
-                        unitLabel === 'segundos' ? 'Segundos' : 'Repetições';
-                      return (
-                        <div
-                          key={targetIdx}
-                          className='rounded-xl border border-neutral/50 bg-neutral/60 px-3 py-3 shadow-inner shadow-neutral/20'
-                        >
-                          <div className='mb-2 flex items-center justify-between text-sm font-semibold text-foreground'>
-                            <div>
-                              {target.label ?? 'Séries'} · {target.repRange[0]}–
-                              {target.repRange[1]} {unitLabel}
-                            </div>
-                            <div className='text-xs text-foreground/70'>
-                              Séries {startIndex + 1}–
-                              {startIndex + target.targetSets}
-                            </div>
-                          </div>
-                          <div className='space-y-2'>
-                            {setsForTarget.map((set, idx) => {
-                              const absoluteIndex = startIndex + idx;
-                              return (
-                                <SetRow
-                                  key={`${exercise.id}-set-${absoluteIndex}`}
-                                  exerciseId={exercise.id}
-                                  absoluteIndex={absoluteIndex}
-                                  set={set}
-                                  previousSet={lastLogsByExercise.get(exercise.id)?.sets[absoluteIndex]}
-                                  unitLabel={unitLabel}
-                                  unitLabelDisplay={unitLabelDisplay}
-                                  hasPr={prBySet[exercise.id]?.[absoluteIndex] ?? false}
-                                  onSetChange={(field, value) => handleSetChange(exercise.id, absoluteIndex, field, value)}
-                                  onAdjust={(field, delta) => adjustSetValue(exercise.id, absoluteIndex, field, delta)}
-                                  onCopyPrevious={() => copyPreviousSet(exercise.id, absoluteIndex)}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant='secondary'
-                    size='sm'
-                    onClick={() => addSet(exercise.id)}
-                    aria-label='Adicionar série extra'
-                  >
-                    <Plus className='mr-2 h-4 w-4' />
-                    Adicionar série
-                  </Button>
-
-                  <div className='space-y-1'>
-                    <Label className='text-foreground'>Notas</Label>
-                    <Textarea
-                      aria-label={`${exercise.name} notas`}
-                      placeholder='Dicas de técnica, tempo, o que lembrar.'
-                      value={state.notes}
-                      onChange={(e) =>
-                        handleNotesChange(exercise.id, e.target.value)
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          );
+      {/* Exercise progress segments */}
+      <div className='flex gap-1'>
+        {exercises.map((ex, i) => {
+          const segState =
+            i < activeIndex ? 'done' : i === activeIndex ? 'current' : 'future';
+          const cls =
+            segState === 'done'
+              ? 'bg-lime'
+              : segState === 'current'
+              ? 'bg-lime opacity-50'
+              : 'bg-bg-1';
+          return <div key={ex.id} className={`h-[3px] flex-1 rounded-[2px] ${cls}`} />;
         })}
       </div>
 
-      {(timerActive || showComplete) && (
-        <div className='fixed bottom-[88px] left-1/2 -translate-x-1/2 z-30 w-[90vw] max-w-sm'>
-          <RestTimerCard
-            remaining={timerRemaining}
-            duration={timerDuration}
-            onSkip={skipTimer}
+      <div className='text-[10px] uppercase tracking-[0.18em] text-txt-faint'>
+        Exercício {activeIndex + 1} de {exercises.length}
+      </div>
+
+      {activeExercise && (
+        <>
+          <ExerciseHero
+            name={activeExercise.name}
+            prescription={
+              (() => {
+                const targets = targetsByExercise.get(activeExercise.id) ?? [];
+                if (!targets.length) return undefined;
+                return targets.map((t) => formatTargetText(t)).join(' · ');
+              })()
+            }
+            imageUrl={'imageUrl' in activeExercise ? activeExercise.imageUrl : undefined}
+            videoUrl={'videoUrl' in activeExercise ? activeExercise.videoUrl : undefined}
+            ratio='16-10'
           />
-        </div>
+
+          {/* Sets */}
+          <div className='rounded-card bg-bg-1'>
+            <div
+              className='grid gap-2 px-3 py-2 text-[9px] uppercase tracking-[0.15em] text-txt-faint'
+              style={{ gridTemplateColumns: '28px 1fr 1fr 36px' }}
+            >
+              <span>Set</span>
+              <span>Kg</span>
+              <span>Reps</span>
+              <span />
+            </div>
+            {(() => {
+              const state = exerciseState[activeExercise.id];
+              if (!state) return null;
+              return state.sets.map((set, absoluteIndex) => {
+                const lastLog = lastLogsByExercise.get(activeExercise.id);
+                const isActive = !set.completed;
+                return (
+                  <SetRow
+                    key={`${activeExercise.id}-set-${absoluteIndex}`}
+                    exerciseId={activeExercise.id}
+                    absoluteIndex={absoluteIndex}
+                    set={set}
+                    previousSet={lastLog?.sets[absoluteIndex]}
+                    unitLabel='repetições'
+                    unitLabelDisplay='Repetições'
+                    hasPr={prBySet[activeExercise.id]?.[absoluteIndex] ?? false}
+                    isActive={isActive}
+                    onSetChange={(field, value) => handleSetChange(activeExercise.id, absoluteIndex, field, value)}
+                    onAdjust={(field, delta) => adjustSetValue(activeExercise.id, absoluteIndex, field, delta)}
+                    onCopyPrevious={() => copyPreviousSet(activeExercise.id, absoluteIndex)}
+                  />
+                );
+              });
+            })()}
+          </div>
+
+          <button
+            type='button'
+            onClick={() => addSet(activeExercise.id)}
+            className='w-full rounded-card border-[1.5px] border-dashed border-txt-faint p-3 text-[12px] uppercase tracking-[0.15em] text-txt-faint'
+          >
+            + adicionar série
+          </button>
+        </>
       )}
+
+      {/* Up next */}
+      {upcoming.length > 0 && (
+        <section>
+          <h2 className='mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-txt-faint'>
+            Próximo
+          </h2>
+          <div className='space-y-1.5'>
+            {upcoming.map((u) => {
+              const uTargets = targetsByExercise.get(u.id) ?? [];
+              const prescriptionShort = uTargets.length
+                ? formatTargetText(uTargets[0])
+                : u.rest;
+              return (
+                <div key={u.id} className='flex items-center gap-2.5 rounded-card bg-bg-1 p-2.5 opacity-70'>
+                  <ExerciseThumb src={'imageUrl' in u ? u.imageUrl : undefined} alt={u.name} />
+                  <div className='flex-1'>
+                    <div className='text-[13px] font-medium'>{u.name}</div>
+                    <div className='mt-0.5 text-[9px] uppercase tracking-[0.15em] text-txt-faint'>
+                      {prescriptionShort}
+                    </div>
+                  </div>
+                  <span className='text-sm text-txt-faint'>›</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <RestTimerOverlay
+        remaining={timerActive ? timerRemaining : null}
+        target={restTarget}
+        onStop={skipTimer}
+      />
+
       <SessionFooter
         progress={progress}
         onFinish={finishSession}

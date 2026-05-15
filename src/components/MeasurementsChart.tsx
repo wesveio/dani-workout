@@ -18,8 +18,6 @@ const LINES = [
   { key: 'arms', label: 'Bracos', color: '#A78BFA' },
 ] as const
 
-type LineKey = (typeof LINES)[number]['key']
-
 export function MeasurementsChart({ entries }: { entries: BodyMetric[] }) {
   const [hidden, setHidden] = useState<string[]>([])
 
@@ -45,7 +43,7 @@ export function MeasurementsChart({ entries }: { entries: BodyMetric[] }) {
   if (chartData.length === 0) {
     return (
       <div className="flex h-[160px] items-center justify-center text-center">
-        <div className="text-xs text-muted">Adicione medidas para ver o grafico aqui.</div>
+        <div className="text-xs text-txt-faint">Adicione medidas para ver o grafico aqui.</div>
       </div>
     )
   }

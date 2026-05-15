@@ -75,19 +75,19 @@ export function PhotoGallery({ photos, userId }: Props) {
       />
 
       {photos.length > 0 && usageMB !== null && (
-        <span className="text-xs text-muted">{usageMB.toFixed(1)} MB usados</span>
+        <span className="text-xs text-txt-faint">{usageMB.toFixed(1)} MB usados</span>
       )}
 
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="aspect-square rounded-lg border-2 border-dashed border-neutral/50 flex items-center justify-center text-muted hover:border-muted transition min-h-[80px]"
+          className="aspect-square rounded-lg border-2 border-dashed border-line/50 flex items-center justify-center text-txt-faint hover:border-txt-faint transition min-h-[80px]"
         >
           <Plus className="h-6 w-6" />
         </button>
 
         {photos.length === 0 ? (
-          <div className="col-span-2 py-12 text-center text-sm text-muted flex flex-col justify-center">
+          <div className="col-span-2 py-12 text-center text-sm text-txt-faint flex flex-col justify-center">
             <div className="font-semibold">Sem fotos ainda</div>
             <div className="mt-1">Adicione sua primeira foto para acompanhar sua transformacao.</div>
           </div>
@@ -109,7 +109,7 @@ export function PhotoGallery({ photos, userId }: Props) {
 
       {/* Full-size viewer dialog */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => { setViewingPhoto(null); setConfirmDelete(false) }}>
-        <DialogContent className="max-w-sm p-0 bg-surface">
+        <DialogContent className="max-w-sm p-0 bg-bg-1">
           {viewingPhoto && (
             <>
               <img src={viewingPhoto.dataUrl} alt="" className="w-full rounded-t-lg" />
@@ -125,7 +125,7 @@ export function PhotoGallery({ photos, userId }: Props) {
                   </Button>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted">A foto sera removida permanentemente.</span>
+                    <span className="text-xs text-txt-faint">A foto sera removida permanentemente.</span>
                     <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
                       Cancelar
                     </Button>

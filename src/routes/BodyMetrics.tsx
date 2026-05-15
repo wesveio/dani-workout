@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
+import { Plus } from 'lucide-react'
 import { useBodyMetricsStore } from '@/store/bodyMetricsStore'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { WeightTrendChart } from '@/components/WeightTrendChart'
-import { MeasurementsChart } from '@/components/MeasurementsChart'
 import { BodyMetricSheet } from '@/components/BodyMetricSheet'
 import { PhotoGallery } from '@/components/PhotoGallery'
+import { MetricCard } from '@/components/redesign'
 import type { BodyMetric } from '@/types'
 
 export default function BodyMetrics() {
@@ -32,20 +31,6 @@ export default function BodyMetrics() {
     useBodyMetricsStore.getState().loadForUser(activeUserId)
   }, [activeUserId])
 
-  const hasMeasurements = entries.some(
-    (e) => e.waist != null || e.hips != null || e.chest != null || e.arms != null
-  )
-
-  const openEdit = (entry: BodyMetric) => {
-    setEditingEntry(entry)
-    setSheetOpen(true)
-  }
-
-  const confirmDelete = (id: string) => {
-    setDeletingId(id)
-    setDeleteDialogOpen(true)
-  }
-
   const handleDelete = async () => {
     if (!deletingId) return
     await useBodyMetricsStore.getState().deleteEntry(deletingId)
@@ -59,102 +44,102 @@ export default function BodyMetrics() {
     if (!open) setEditingEntry(undefined)
   }
 
+  // Sort entries newest-first
+  const sorted = [...entries].sort((a, b) => (a.date < b.date ? 1 : -1))
+  const latest = sorted[0]
+
+  // 30-day cutoff for delta
+  const cutoff30 = dayjs().subtract(30, 'day')
+  const old30 = sorted.find((e) => dayjs(e.date).isBefore(cutoff30))
+
+  function fmt(val: number | undefined): string {
+    return val != null ? String(val) : '—'
+  }
+
+  function delta(field: keyof Pick<BodyMetric, 'weight' | 'waist' | 'hips' | 'chest' | 'arms'>): string | undefined {
+    if (!latest || latest[field] == null || !old30 || old30[field] == null) return undefined
+    const diff = (latest[field] as number) - (old30[field] as number)
+    if (diff === 0) return undefined
+    return diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)
+  }
+
+  function history(field: keyof Pick<BodyMetric, 'weight' | 'waist' | 'hips' | 'chest' | 'arms'>): number[] {
+    return sorted
+      .slice(0, 7)
+      .reverse()
+      .map((e) => e[field] as number)
+      .filter((v) => v != null)
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-muted">Corpo</div>
-          <h1 className="text-2xl font-bold">Corpo</h1>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-txt-faint">Métricas corporais</div>
+          <h1 className="text-2xl font-light tracking-tight">Corpo</h1>
         </div>
-        <Button
-          className="bg-accent text-white"
+        <button
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-bg-1 text-txt-primary"
+          aria-label="Registrar métrica"
           onClick={() => {
             setEditingEntry(undefined)
             setSheetOpen(true)
           }}
         >
-          Registrar
-        </Button>
+          <Plus size={18} />
+        </button>
       </div>
 
-      {/* Weight trend chart */}
-      <Card className="bg-surface border-neutral/50">
-        <CardContent className="p-4">
-          <WeightTrendChart entries={entries} />
-        </CardContent>
-      </Card>
-
-      {/* Measurements chart — only show if any entry has measurement data */}
-      {hasMeasurements && (
-        <Card className="bg-surface border-neutral/50">
-          <CardContent className="p-4">
-            <MeasurementsChart entries={entries} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Entry history list */}
+      {/* Hoje kicker + 2×2 metric grid */}
       <div>
-        <div className="text-xs uppercase tracking-[0.2em] text-muted mb-2">Historico</div>
-        {entries.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted">
-            <div className="font-semibold">Sem registros ainda</div>
-            <div className="mt-1">Registre seu peso hoje para comecar a ver sua evolucao.</div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {entries.map((entry) => (
-              <Card
-                key={entry.id}
-                className="bg-surface border-neutral/50 cursor-pointer"
-                onClick={() => openEdit(entry)}
-              >
-                <CardContent className="p-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold">
-                      {dayjs(entry.date).format('DD/MM/YYYY')}
-                    </div>
-                    {entry.weight != null && (
-                      <div className="text-lg font-bold">{entry.weight} kg</div>
-                    )}
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      {entry.waist != null && (
-                        <span className="text-xs text-muted">Cintura: {entry.waist}cm</span>
-                      )}
-                      {entry.hips != null && (
-                        <span className="text-xs text-muted">Quadril: {entry.hips}cm</span>
-                      )}
-                      {entry.chest != null && (
-                        <span className="text-xs text-muted">Peitoral: {entry.chest}cm</span>
-                      )}
-                      {entry.arms != null && (
-                        <span className="text-xs text-muted">Bracos: {entry.arms}cm</span>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      confirmDelete(entry.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <div className="text-[10px] uppercase tracking-[0.2em] text-txt-faint mb-2">Hoje</div>
+        <div className="grid grid-cols-2 gap-2">
+          <MetricCard
+            label="Peso"
+            value={fmt(latest?.weight)}
+            unit="kg"
+            delta={delta('weight')}
+            history={history('weight')}
+          />
+          <MetricCard
+            label="Cintura"
+            value={fmt(latest?.waist)}
+            unit="cm"
+            delta={delta('waist')}
+            history={history('waist')}
+          />
+          <MetricCard
+            label="Peito"
+            value={fmt(latest?.chest)}
+            unit="cm"
+            delta={delta('chest')}
+            history={history('chest')}
+          />
+          <MetricCard
+            label="Braço"
+            value={fmt(latest?.arms)}
+            unit="cm"
+            delta={delta('arms')}
+            history={history('arms')}
+          />
+        </div>
       </div>
 
       {/* Photo gallery */}
       <div>
-        <div className="text-xs uppercase tracking-[0.2em] text-muted mb-2">Fotos de Progresso</div>
+        <h2 className="text-base font-medium mb-3">Fotos de progresso</h2>
         <PhotoGallery photos={photos} userId={activeUserId} />
+        <button
+          className="mt-3 w-full rounded-card border border-dashed border-txt-faint/40 py-3 text-sm text-txt-faint flex items-center justify-center gap-1.5"
+          onClick={() => {
+            setEditingEntry(undefined)
+            setSheetOpen(true)
+          }}
+        >
+          <Plus size={14} />
+          adicionar foto
+        </button>
       </div>
 
       {/* Quick-log sheet */}

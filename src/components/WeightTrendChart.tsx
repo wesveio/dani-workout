@@ -39,8 +39,8 @@ export function WeightTrendChart({ entries }: { entries: BodyMetric[] }) {
       <div className="h-[200px]">
         {chartData.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="text-sm font-semibold text-muted">Sem registros ainda</div>
-            <div className="mt-1 text-xs text-muted">
+            <div className="text-sm font-semibold text-txt-faint">Sem registros ainda</div>
+            <div className="mt-1 text-xs text-txt-faint">
               Registre seu peso hoje para comecar a ver sua evolucao.
             </div>
           </div>

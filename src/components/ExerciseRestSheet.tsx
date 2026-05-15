@@ -35,7 +35,7 @@ export function ExerciseRestSheet({ open, onOpenChange, currentSeconds, onSave }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface border-neutral/50 max-w-sm">
+      <DialogContent className="bg-bg-1 border-line/50 max-w-sm">
         <DialogHeader>
           <DialogTitle>Tempo de Descanso</DialogTitle>
         </DialogHeader>
@@ -70,7 +70,7 @@ export function ExerciseRestSheet({ open, onOpenChange, currentSeconds, onSave }
               className="min-h-[44px]"
               aria-label="Segundos de descanso personalizado"
             />
-            <div className="text-xs text-muted mt-1">Maximo: 600 segundos</div>
+            <div className="text-xs text-txt-faint mt-1">Maximo: 600 segundos</div>
           </div>
         )}
         <Button onClick={handleSave} className="mt-3 min-h-[44px] w-full">
