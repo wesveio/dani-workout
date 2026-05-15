@@ -1,264 +1,173 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { AlertTriangle, ArrowRight, Flame, LayoutTemplate, PlayCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo } from '@/lib/program'
-import { useActiveProgram } from '@/lib/user'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById } from '@/lib/program'
+import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
-import { TemplatePreviewSheet } from '@/components/TemplatePreviewSheet'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import type { WorkoutTemplate } from '@/types'
+import { PrimaryCTA, AderenciaDots, Sparkline } from '@/components/redesign'
+import type { DayState } from '@/components/redesign'
 
-const formatDay = (day: string) => day.slice(0, 3)
-
-const legend = [
-  {
-    sigla: 'RIR',
-    texto: 'Reps in Reserve. Quantas repetições sobrariam antes da falha. Ex.: RIR 2 = poderia fazer +2 reps.',
-  },
-  {
-    sigla: 'Deload',
-    texto: 'Semana de redução de volume/carga (60–70%) para recuperar. Nesta planilha: semanas 4 e 8.',
-  },
-  {
-    sigla: 'Composto',
-    texto: 'Exercício multiarticular, mais músculos envolvidos. Descanso maior (2–3 min).',
-  },
-  {
-    sigla: 'Isolador / Pump',
-    texto: 'Movimento focado em um grupo ou pump. Descanso 60–90s, execução controlada.',
-  },
-  {
-    sigla: 'Progressão dupla',
-    texto: 'Suba carga só quando todas as séries baterem o topo da faixa de reps com forma limpa.',
-  },
-]
+// Day-of-week index (0=Mon…6=Sun) for each Portuguese day name
+const dayNameToIndex: Record<string, number> = {
+  'segunda-feira': 0,
+  'terça-feira': 1,
+  'quarta-feira': 2,
+  'quinta-feira': 3,
+  'sexta-feira': 4,
+  'sábado': 5,
+  'domingo': 6,
+}
 
 export default function Dashboard() {
   const workouts = useWorkoutStore((s) => s.workouts)
+  const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const settings = useWorkoutStore((s) => s.settings)
-  const templates = useWorkoutStore((s) => s.templates)
-  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null)
+  const profile = useActiveUserProfile()
   const program = useActiveProgram()
+
   const weekNumber = getCurrentWeekNumber(settings.programStart, program.durationWeeks)
   const weekInfo = getWeekInfo(program, weekNumber)
   const today = dayjs()
   const todaySession = getSessionForDate(today, program.schedule)
   const sessionTemplate = getSessionTemplate(program, todaySession.sessionId)
   const isRestDay = todaySession.next
-  const expectedSessions = Math.min(weekNumber, program.durationWeeks) * program.schedule.length
-  const adherence = Math.min(100, Math.round((workouts.length / expectedSessions) * 100))
-  const recent = workouts.slice(0, 3)
-  const ctaPrimary = isRestDay
-    ? { to: `/session/${sessionTemplate.id}/${weekNumber}`, label: `Adiantar sessão ${sessionTemplate.id}` }
-    : { to: `/session/${sessionTemplate.id}/${weekNumber}`, label: `Iniciar sessão ${sessionTemplate.id}` }
-  const ctaSecondary = isRestDay
-    ? { to: '/week', label: 'Manter descanso / planejar' }
-    : { to: '/week', label: 'Ver semana' }
+  const isDeload = program.deload.weeks.includes(weekNumber)
+
+  // Prescription card values — use first exercise of the session as representative
+  const firstExercise = sessionTemplate.exercises[0]
+  const sessionVolume = sessionTemplate.exercises.reduce((acc, ex) => {
+    const p = ex.prescriptions.find(
+      (pr) => weekNumber >= pr.weekRange[0] && weekNumber <= pr.weekRange[1],
+    ) ?? ex.prescriptions[0]
+    const sets = p?.targets[0]?.sets ?? 0
+    return acc + sets
+  }, 0)
+
+  // Aderência dots — current week Mon–Sun
+  // Force Monday: dayjs startOf('week') is Sunday in some locales
+  const monday = dayjs().subtract((today.day() + 6) % 7, 'day').startOf('day')
+  const weekStartStr = monday.format('YYYY-MM-DD')
+  const scheduledIndices = program.schedule.map((d) => dayNameToIndex[d.day.toLowerCase()] ?? -1).filter((i) => i >= 0)
+  const rawStates = getWeekStates(workouts, weekStartStr, scheduledIndices)
+  const weekStates: DayState[] = rawStates
+
+  // Adherence count for current week
+  const weekDoneCount = weekStates.filter((s) => s === 'done').length
+  const weekTotalScheduled = scheduledIndices.length
+
+  // Recent PR
+  const recentPr = getRecentPr(exerciseLogs, (id) => findExerciseById(program, id)?.name)
 
   return (
-    <>
-    <div className="space-y-5">
-      <Card className="bg-gradient-to-r from-neutral via-surface to-neutral shadow-soft border border-neutral/50">
-        <CardContent className="grid gap-4 md:grid-cols-[1.2fr_0.8fr] items-center p-5">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant={weekInfo.deload ? 'muted' : 'default'}>
-                Semana {weekNumber} · {weekInfo.phase}
-              </Badge>
-              {isRestDay ? <Badge variant="outline">Dia de descanso</Badge> : <Badge variant="outline">Sessão do dia</Badge>}
-            </div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-2xl font-bold">
-                {isRestDay ? 'Recupere hoje' : today.format('dddd, D [de] MMM')}
-              </CardTitle>
-              {program.deload.weeks.includes(weekNumber) && (
-                <span className="flex items-center gap-2 rounded-full bg-neutral/60 px-3 py-1 text-xs font-semibold text-foreground">
-                  <AlertTriangle className="h-4 w-4 text-accent" />
-                  Deload
-                </span>
-              )}
-            </div>
-            <CardDescription className="text-foreground">
-              {isRestDay ? todaySession.label : 'Hoje'} · Sessão {sessionTemplate.id} — {sessionTemplate.subtitle}
-            </CardDescription>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{weekInfo.emphasis}</Badge>
-              <Badge variant="outline">{program.warmup.duration} aquecimento</Badge>
-              <Badge variant="outline">
-                {sessionTemplate.exercises.length} exercícios · {sessionTemplate.exercises[0].rest} descanso
-              </Badge>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button asChild size="lg" variant={isRestDay ? 'default' : 'default'}>
-                <Link
-                  to={ctaPrimary.to}
-                  aria-label={ctaPrimary.label}
-                >
-                  <PlayCircle className="mr-2 h-5 w-5" />
-                  {ctaPrimary.label}
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" size="lg">
-                <Link to={ctaSecondary.to} aria-label={ctaSecondary.label}>
-                  {ctaSecondary.label}
-                </Link>
-              </Button>
-            </div>
-            {templates.length > 0 && (
-              <div className="space-y-2 mt-2">
-                <div className="text-xs uppercase tracking-[0.2em] text-muted">Templates</div>
-                {templates.map((t) => (
-                  <Button
-                    key={t.id}
-                    variant="secondary"
-                    className="w-full justify-start min-h-[44px]"
-                    onClick={() => setPreviewTemplate(t)}
-                  >
-                    <LayoutTemplate className="mr-2 h-4 w-4" />
-                    {t.name}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="flex justify-center">
-            <div className="relative h-40 w-40">
-              <div className="absolute inset-0 rounded-full bg-neutral/70" />
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: `conic-gradient(${adherence >= 70 ? '#4EFF74' : '#4495FF'} ${adherence}%, rgba(255,255,255,0.08) ${adherence}%)`,
-                }}
-              />
-              <div className="absolute inset-3 rounded-full bg-surface grid place-items-center text-center">
-                <div className="text-3xl font-bold">{adherence}%</div>
-                <div className="text-xs text-muted">aderência</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Regras do programa</CardTitle>
-            <CardDescription>Lembretes rápidos para treinar.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-foreground/90">
-            {program.rules.map((rule) => (
-              <div key={rule} className="flex gap-2">
-                <Flame className="mt-0.5 h-4 w-4 text-accent" />
-                <span>{rule}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Agenda semanal</CardTitle>
-            <CardDescription>{program.schedule.map((day) => formatDay(day.day)).join(' / ')}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {program.schedule.map((day) => (
-              <Link
-                key={day.day}
-                to={`/session/${day.sessionId}/${weekNumber}`}
-                className="group rounded-2xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft transition hover:-translate-y-1 hover:border-accent text-foreground"
-              >
-                <div className="flex items-center justify-between">
-                  <Badge variant="muted" className="text-xs">{formatDay(day.day)}</Badge>
-                  <ArrowRight className="h-4 w-4 text-muted group-hover:text-foreground" />
-                </div>
-                <div className="mt-2 text-sm font-semibold">
-                  Sessão {day.sessionId}
-                </div>
-                <div className="text-xs text-muted">
-                  {getSessionTemplate(program, day.sessionId).subtitle}
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Últimos registros</CardTitle>
-            <CardDescription>3 sessões mais recentes</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {recent.length === 0 && <div className="text-sm text-muted">Nenhum registro ainda.</div>}
-            {recent.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-center justify-between rounded-lg border border-neutral/30 bg-surface px-3 py-2"
-              >
-                <div>
-                  <div className="text-sm font-semibold">
-                    Sessão {log.sessionType} · {dayjs(log.date).format('D MMM')}
-                  </div>
-                  <div className="text-xs text-muted">Semana {log.weekNumber}</div>
-                </div>
-                <Badge variant={log.deload ? 'muted' : 'outline'}>
-                  {log.deload ? 'Deload' : 'Registrado'}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+    <div className='flex flex-col gap-4 p-4 pb-24'>
+      {/* Header */}
+      <div className='flex items-center gap-3'>
+        <div
+          className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-black'
+          style={{ background: profile?.avatarColor ?? '#4EFF74' }}
+        >
+          {profile?.avatarInitial ?? '?'}
+        </div>
+        <div>
+          <p className='text-xs text-txt-faint'>Olá,</p>
+          <p className='text-sm font-semibold leading-tight'>{profile?.name ?? 'Atleta'}</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Legenda rápida</CardTitle>
-          <CardDescription>Siglas e termos usados no programa.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2">
-          {legend.map((item) => (
-            <div
-              key={item.sigla}
-              className="rounded-xl border border-neutral/50 bg-surface px-3 py-3 shadow-soft text-sm text-foreground/90"
-            >
-              <div className="font-semibold text-foreground">{item.sigla}</div>
-              <div className="text-foreground/80">{item.texto}</div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {/* Today's session block */}
+      <div className='flex flex-col gap-1'>
+        <p className='text-[11px] font-semibold uppercase tracking-widest text-txt-faint'>
+          {isRestDay ? 'Próxima sessão' : 'Hoje'}
+        </p>
+        <h1 className='text-[28px] font-bold leading-tight'>
+          {sessionTemplate.title}
+        </h1>
+        <p className='text-sm text-txt-faint'>{sessionTemplate.subtitle}</p>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Aquecimento (antes de cada sessão)</CardTitle>
-          <CardDescription>{program.warmup.duration}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm text-foreground/90">
-            {program.warmup.items.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <div className="mt-1 h-2 w-2 rounded-full bg-foreground" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          {program.deload.weeks.includes(weekNumber) && (
-            <div className="mt-4 rounded-xl border border-neutral/60 bg-neutral/70 px-4 py-3 text-sm text-foreground/90 shadow-inner shadow-neutral/20">
-              <strong>Lembrete de deload:</strong> {program.deload.guidance}
+      {/* Primary CTA */}
+      <PrimaryCTA
+        label='Iniciar treino'
+        to={`/session/${sessionTemplate.id}/${weekNumber}`}
+      />
+
+      {/* Prescription card */}
+      <div className='rounded-2xl bg-bg-2 p-4 flex flex-col gap-3'>
+        <p className='text-xs font-semibold uppercase tracking-widest text-txt-faint'>
+          Prescrição — Semana {weekNumber}
+        </p>
+        <div className='flex flex-col gap-2'>
+          <PrescRow label='Volume previsto' value={`~${sessionVolume} séries`} />
+          <PrescRow label='RIR alvo' value={firstExercise?.rir ?? '—'} />
+          <PrescRow label='Duração estimada' value={`${program.warmup.duration} + treino`} />
+          <PrescRow
+            label='Deload'
+            value={isDeload ? 'Sim — reduza 30–40%' : 'Não'}
+            highlight={isDeload}
+          />
+        </div>
+        {weekInfo && (
+          <p className='text-[11px] text-txt-faint'>
+            {weekInfo.phase} · {weekInfo.emphasis}
+          </p>
+        )}
+      </div>
+
+      {/* Aderência */}
+      <div className='rounded-2xl bg-bg-2 p-4 flex flex-col gap-3'>
+        <div className='flex items-center justify-between'>
+          <p className='text-xs font-semibold uppercase tracking-widest text-txt-faint'>
+            Aderência esta semana
+          </p>
+          <p className='text-sm font-semibold'>
+            {weekDoneCount}/{weekTotalScheduled}
+          </p>
+        </div>
+        <AderenciaDots states={weekStates} />
+      </div>
+
+      {/* Recent PR card */}
+      {recentPr ? (
+        <Link
+          to={`/history`}
+          className='rounded-2xl bg-bg-2 p-4 flex flex-col gap-3 active:opacity-80'
+        >
+          <div className='flex items-center justify-between'>
+            <p className='text-xs font-semibold uppercase tracking-widest text-txt-faint'>
+              PR recente
+            </p>
+            <span className='text-[10px] text-lime font-semibold'>ver histórico →</span>
+          </div>
+          <div className='flex items-end justify-between gap-3'>
+            <div>
+              <p className='text-sm font-semibold leading-tight'>{recentPr.exerciseName}</p>
+              <p className='text-xs text-txt-faint'>
+                {recentPr.weight} kg × {recentPr.reps} reps
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {recentPr.weeklyMaxes.length > 1 && (
+              <Sparkline values={recentPr.weeklyMaxes} className='w-24' />
+            )}
+          </div>
+        </Link>
+      ) : null}
     </div>
+  )
+}
 
-    <TemplatePreviewSheet
-      template={previewTemplate}
-      open={!!previewTemplate}
-      onOpenChange={(open) => { if (!open) setPreviewTemplate(null) }}
-    />
-    </>
+function PrescRow({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string
+  value: string
+  highlight?: boolean
+}) {
+  return (
+    <div className='flex items-center justify-between'>
+      <span className='text-sm text-txt-faint'>{label}</span>
+      <span className={`text-sm font-semibold ${highlight ? 'text-lime' : ''}`}>{value}</span>
+    </div>
   )
 }

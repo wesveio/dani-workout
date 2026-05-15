@@ -1,0 +1,112 @@
+import { describe, it, expect } from 'vitest'
+import { getWeekStates, getRecentPr } from './program'
+import type { ExerciseLog } from '@/types'
+
+describe('getWeekStates', () => {
+  const monday = '2024-01-01' // a Monday
+
+  it('returns 7 "none" states with no logs and no scheduled days', () => {
+    const states = getWeekStates([], monday, [])
+    expect(states).toHaveLength(7)
+    expect(states.every((s) => s === 'none')).toBe(true)
+  })
+
+  it('marks a day "done" when a log exists for that date', () => {
+    const states = getWeekStates([{ date: '2024-01-01' }], monday, [])
+    expect(states[0]).toBe('done')
+  })
+
+  it('marks "done" for correct day index', () => {
+    // 2024-01-03 is Wednesday = index 2
+    const states = getWeekStates([{ date: '2024-01-03' }], monday, [2])
+    expect(states[2]).toBe('done')
+    expect(states[0]).toBe('none')
+  })
+
+  it('marks a scheduled past day "miss" when no log', () => {
+    // Use a week far in the past so all days are before today
+    const pastMonday = '2023-01-02'
+    const states = getWeekStates([], pastMonday, [0, 2, 4]) // Mon, Wed, Fri
+    expect(states[0]).toBe('miss')
+    expect(states[2]).toBe('miss')
+    expect(states[4]).toBe('miss')
+    expect(states[1]).toBe('none')
+    expect(states[3]).toBe('none')
+    expect(states[6]).toBe('none')
+  })
+
+  it('does not mark future scheduled day as miss', () => {
+    // Use a week far in the future so all days are after today
+    const futureMonday = '2099-01-05'
+    const states = getWeekStates([], futureMonday, [0])
+    expect(states[0]).toBe('none')
+  })
+
+  it('prefers "done" over "miss" when log exists on scheduled day', () => {
+    const pastMonday = '2023-01-02'
+    const states = getWeekStates([{ date: '2023-01-02' }], pastMonday, [0])
+    expect(states[0]).toBe('done')
+  })
+})
+
+describe('getRecentPr', () => {
+  const makelog = (
+    exerciseId: string,
+    date: string,
+    weight: number,
+    reps: number,
+  ): ExerciseLog => ({
+    id: `${exerciseId}-${date}`,
+    workoutId: 'w1',
+    exerciseId,
+    date,
+    weekNumber: 1,
+    sessionType: 'A',
+    userId: 'user1',
+    sets: [{ weight, reps, rir: 2, completed: true }],
+  })
+
+  it('returns null for empty logs', () => {
+    expect(getRecentPr([], () => undefined)).toBeNull()
+  })
+
+  it('returns null if all sets are not completed', () => {
+    const log: ExerciseLog = {
+      id: 'l1',
+      workoutId: 'w1',
+      exerciseId: 'squat',
+      date: '2024-01-01',
+      weekNumber: 1,
+      sessionType: 'A',
+      userId: 'u1',
+      sets: [{ weight: 100, reps: 5, rir: 2, completed: false }],
+    }
+    expect(getRecentPr([log], () => 'Squat')).toBeNull()
+  })
+
+  it('returns the exercise with highest weight', () => {
+    const logs = [
+      makelog('squat', '2024-01-01', 80, 5),
+      makelog('bench', '2024-01-02', 100, 5),
+    ]
+    const pr = getRecentPr(logs, (id) => id)
+    expect(pr?.exerciseId).toBe('bench')
+    expect(pr?.weight).toBe(100)
+  })
+
+  it('builds weeklyMaxes array', () => {
+    const logs = [
+      makelog('squat', '2024-01-01', 80, 5), // week 2023-12-31
+      makelog('squat', '2024-01-08', 90, 5), // next week
+    ]
+    const pr = getRecentPr(logs, () => 'Squat')
+    expect(pr?.weeklyMaxes).toHaveLength(2)
+    expect(pr?.weeklyMaxes[1]).toBe(90)
+  })
+
+  it('uses findName to resolve exercise name', () => {
+    const logs = [makelog('hip-thrust', '2024-01-01', 70, 8)]
+    const pr = getRecentPr(logs, (id) => (id === 'hip-thrust' ? 'Hip Thrust' : undefined))
+    expect(pr?.exerciseName).toBe('Hip Thrust')
+  })
+})
