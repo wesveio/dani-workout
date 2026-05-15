@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import type { Exercise, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
+import type { Exercise, Phase, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
 import type { ExerciseLog, SessionType } from '@/types'
 
 export type DayStateValue = 'done' | 'miss' | 'none'
@@ -152,6 +152,9 @@ export const computeTargetsForWeek = (
     }
   })
 }
+
+export const getPhaseForWeek = (program: Program, week: number): Phase | undefined =>
+  program.phases.find((p) => p.weeks.includes(week))
 
 export const formatTargetText = (target: SetTarget) => {
   const setText = target.setRange
