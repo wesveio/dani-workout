@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import {
   BookmarkPlus,
   Check,
+  ChevronDown,
+  ChevronUp,
   MoreVertical,
   X,
 } from 'lucide-react';
@@ -143,6 +145,8 @@ export default function SessionDetail() {
   const [exerciseState, setExerciseState] = useState<
     Record<string, ExerciseState>
   >({});
+  const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
@@ -211,6 +215,7 @@ export default function SessionDetail() {
   const setExerciseRestSeconds = useWorkoutStore((s) => s.setExerciseRestSeconds)
   const [restSheetExerciseId, setRestSheetExerciseId] = useState<string | null>(null)
   const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
+  const orderKey = `session-order-${activeUserId}-${activeSessionType}-${activeWeek}`;
   const progress = useMemo(() => {
     const totals = Object.values(exerciseState).reduce(
       (acc, ex) => {
@@ -280,6 +285,32 @@ export default function SessionDetail() {
     effectiveSession,
     targetsByExercise,
   ]);
+
+  useEffect(() => {
+    if (!effectiveSession) return;
+    const sessionIds = effectiveSession.exercises.map((e) => e.id);
+    let restored: string[] | null = null;
+    try {
+      const raw = localStorage.getItem(orderKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
+          const filtered = parsed.filter((id) => sessionIds.includes(id));
+          sessionIds.forEach((id) => {
+            if (!filtered.includes(id)) filtered.push(id);
+          });
+          restored = filtered;
+        }
+      }
+    } catch (err) {
+      console.warn('Ordem inválida, ignorando.', err);
+      localStorage.removeItem(orderKey);
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExerciseOrder(restored ?? sessionIds);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedExerciseId(null);
+  }, [effectiveSession, orderKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -487,22 +518,29 @@ export default function SessionDetail() {
           sessionType: activeSessionType,
           deload: program?.deload.weeks.includes(activeWeek) ?? false,
         },
-        exercises: Object.entries(exerciseState).map(([exerciseId, state]) => ({
-          exerciseId,
-          sets: state.sets.map((s) => ({
-            weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
-            reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
-            rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
-            completed: Boolean(s.completed),
-          })),
-          notes: state.notes,
-        })),
+        exercises: exercises
+          .map((ex) => {
+            const state = exerciseState[ex.id];
+            if (!state) return null;
+            return {
+              exerciseId: ex.id,
+              sets: state.sets.map((s) => ({
+                weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
+                reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
+                rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
+                completed: Boolean(s.completed),
+              })),
+              notes: state.notes,
+            };
+          })
+          .filter((e): e is NonNullable<typeof e> => e !== null),
       });
       toast({
         title: 'Sessão salva',
         description: 'Bom trabalho! Progresso salvo offline.',
       });
       localStorage.removeItem(draftKey);
+      localStorage.removeItem(orderKey);
       setHasUnsaved(false);
       setCelebrating(true);
     } catch (err) {
@@ -515,23 +553,56 @@ export default function SessionDetail() {
     }
   };
 
-  const exercises = useMemo(
-    () => effectiveSession?.exercises ?? [],
-    [effectiveSession],
-  );
+  const exercises = useMemo(() => {
+    const base = effectiveSession?.exercises ?? [];
+    if (!exerciseOrder.length) return base;
+    const byId = new Map(base.map((e) => [e.id, e]));
+    const ordered = exerciseOrder
+      .map((id) => byId.get(id))
+      .filter((e): e is NonNullable<typeof e> => Boolean(e));
+    // Append any session exercises not yet in order (e.g. data shape changed)
+    base.forEach((e) => {
+      if (!exerciseOrder.includes(e.id)) ordered.push(e);
+    });
+    return ordered;
+  }, [effectiveSession, exerciseOrder]);
 
-  // Determine active exercise index: first exercise with at least one uncompleted set
-  // (must be above the early return to satisfy rules-of-hooks)
+  // Active exercise index: respects manual selection (unless that exercise is fully complete,
+  // in which case auto-advance to the next incomplete one), otherwise first with an uncompleted set.
   const activeIndex = useMemo(() => {
+    if (selectedExerciseId) {
+      const idx = exercises.findIndex((e) => e.id === selectedExerciseId);
+      if (idx >= 0) {
+        const sel = exerciseState[selectedExerciseId];
+        const stillIncomplete = sel && sel.sets.some((s) => !s.completed);
+        if (stillIncomplete) return idx;
+      }
+    }
     for (let i = 0; i < exercises.length; i++) {
       const state = exerciseState[exercises[i].id];
       if (state && state.sets.some((s) => !s.completed)) return i;
     }
     return exercises.length > 0 ? exercises.length - 1 : 0;
-  }, [exercises, exerciseState]);
+  }, [exercises, exerciseState, selectedExerciseId]);
 
   const activeExercise = exercises[activeIndex] ?? null;
-  const upcoming = exercises.slice(activeIndex + 1, activeIndex + 3);
+
+  const moveExercise = (id: string, dir: -1 | 1) => {
+    setExerciseOrder((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0) return prev;
+      const target = idx + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      try {
+        localStorage.setItem(orderKey, JSON.stringify(next));
+      } catch (err) {
+        console.warn('Falha ao persistir ordem.', err);
+      }
+      return next;
+    });
+  };
 
   const sessionLabel = effectiveSession?.subtitle ?? `Sessão ${effectiveSession?.id ?? ''}`;
   const sessionSubtitle = `Semana ${activeWeek}${weekInfo ? ` · ${weekInfo.phase}` : ''}`;
@@ -645,16 +716,22 @@ export default function SessionDetail() {
               className='flex-1 min-h-[44px]'
               disabled={!templateName.trim()}
               onClick={async () => {
-                const templateExercises = Object.entries(exerciseState).map(([exerciseId, state]) => ({
-                  exerciseId,
-                  restSeconds: settings.exerciseRestConfig?.[exerciseId] ?? settings.defaultRestSeconds,
-                  defaultSets: state.sets.map((s) => ({
-                    weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
-                    reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
-                    rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
-                    completed: false,
-                  })),
-                }));
+                const templateExercises = exercises
+                  .map((ex) => {
+                    const state = exerciseState[ex.id];
+                    if (!state) return null;
+                    return {
+                      exerciseId: ex.id,
+                      restSeconds: settings.exerciseRestConfig?.[ex.id] ?? settings.defaultRestSeconds,
+                      defaultSets: state.sets.map((s) => ({
+                        weight: Number.isFinite(s.weight) ? Number(s.weight) : 0,
+                        reps: Number.isFinite(s.reps) ? Number(s.reps) : 0,
+                        rir: Number.isFinite(s.rir) ? Number(s.rir) : 0,
+                        completed: false,
+                      })),
+                    };
+                  })
+                  .filter((e): e is NonNullable<typeof e> => e !== null);
                 await saveTemplate({ userId: activeUserId, name: templateName.trim(), exercises: templateExercises });
                 setSaveTemplateOpen(false);
                 toast({ title: 'Template salvo com sucesso.' });
@@ -780,28 +857,73 @@ export default function SessionDetail() {
         </>
       )}
 
-      {/* Up next */}
-      {upcoming.length > 0 && (
+      {/* All exercises — pick & reorder */}
+      {exercises.length > 0 && (
         <section>
           <h2 className='mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-txt-faint'>
-            Próximo
+            Exercícios
           </h2>
           <div className='space-y-1.5'>
-            {upcoming.map((u) => {
-              const uTargets = targetsByExercise.get(u.id) ?? [];
-              const prescriptionShort = uTargets.length
-                ? formatTargetText(uTargets[0])
-                : u.rest;
+            {exercises.map((ex, idx) => {
+              const exTargets = targetsByExercise.get(ex.id) ?? [];
+              const prescriptionShort = exTargets.length
+                ? formatTargetText(exTargets[0])
+                : ex.rest;
+              const exState = exerciseState[ex.id];
+              const total = exState?.sets.length ?? 0;
+              const done = exState?.sets.filter((s) => s.completed).length ?? 0;
+              const isComplete = total > 0 && done === total;
+              const isActive = idx === activeIndex;
+              const rowCls = isActive
+                ? 'border border-lime/60 bg-bg-1'
+                : isComplete
+                ? 'bg-bg-1 opacity-50'
+                : 'bg-bg-1 opacity-80';
               return (
-                <div key={u.id} className='flex items-center gap-2.5 rounded-card bg-bg-1 p-2.5 opacity-70'>
-                  <ExerciseThumb src={'imageUrl' in u ? u.imageUrl : undefined} alt={u.name} />
-                  <div className='flex-1'>
-                    <div className='text-[13px] font-medium'>{u.name}</div>
-                    <div className='mt-0.5 text-[9px] uppercase tracking-[0.15em] text-txt-faint'>
-                      {prescriptionShort}
-                    </div>
+                <div key={ex.id} className={`flex items-center gap-2 rounded-card p-2 ${rowCls}`}>
+                  <div className='flex flex-col'>
+                    <button
+                      type='button'
+                      aria-label={`Mover ${ex.name} para cima`}
+                      disabled={idx === 0}
+                      onClick={() => moveExercise(ex.id, -1)}
+                      className='text-txt-faint disabled:opacity-30'
+                    >
+                      <ChevronUp className='h-4 w-4' />
+                    </button>
+                    <button
+                      type='button'
+                      aria-label={`Mover ${ex.name} para baixo`}
+                      disabled={idx === exercises.length - 1}
+                      onClick={() => moveExercise(ex.id, 1)}
+                      className='text-txt-faint disabled:opacity-30'
+                    >
+                      <ChevronDown className='h-4 w-4' />
+                    </button>
                   </div>
-                  <span className='text-sm text-txt-faint'>›</span>
+                  <button
+                    type='button'
+                    onClick={() => setSelectedExerciseId(ex.id)}
+                    className='flex flex-1 items-center gap-2.5 text-left'
+                    aria-current={isActive ? 'true' : undefined}
+                  >
+                    <ExerciseThumb src={'imageUrl' in ex ? ex.imageUrl : undefined} alt={ex.name} />
+                    <div className='flex-1'>
+                      <div className='flex items-center gap-1.5 text-[13px] font-medium'>
+                        {ex.name}
+                        {isComplete && <Check className='h-3 w-3 text-lime' />}
+                      </div>
+                      <div className='mt-0.5 text-[9px] uppercase tracking-[0.15em] text-txt-faint'>
+                        {prescriptionShort}
+                        {total > 0 && ` · ${done}/${total}`}
+                      </div>
+                    </div>
+                    {isActive ? (
+                      <span className='text-[9px] uppercase tracking-[0.15em] text-lime'>Atual</span>
+                    ) : (
+                      <span className='text-sm text-txt-faint'>›</span>
+                    )}
+                  </button>
                 </div>
               );
             })}
