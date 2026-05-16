@@ -50,7 +50,9 @@ export default function Dashboard() {
   const monday = dayjs().subtract((today.day() + 6) % 7, 'day').startOf('day')
   const weekStartStr = monday.format('YYYY-MM-DD')
   const scheduledIndices = program.schedule.map((d) => dayNameToIndex[d.day.toLowerCase()] ?? -1).filter((i) => i >= 0)
-  const rawStates = getWeekStates(workouts, weekStartStr, scheduledIndices)
+  // Scope adherence to current cycle: ignore logs from before programStart
+  const cycleWorkouts = workouts.filter((w) => w.date >= settings.programStart)
+  const rawStates = getWeekStates(cycleWorkouts, weekStartStr, scheduledIndices)
   const weekStates: DayState[] = rawStates
 
   // Adherence count for current week

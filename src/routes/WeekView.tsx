@@ -24,12 +24,23 @@ export default function WeekView() {
     setWeek(currentWeek);
   }, [currentWeek]);
 
+  // Scope logs to the current program cycle so a restart doesn't surface old-cycle data
+  const programStart = settings.programStart;
+  const cycleWorkouts = useMemo(
+    () => workouts.filter((w) => w.date >= programStart),
+    [workouts, programStart],
+  );
+  const cycleExerciseLogs = useMemo(
+    () => exerciseLogs.filter((l) => l.date >= programStart),
+    [exerciseLogs, programStart],
+  );
+
   // Sessions for the selected week: one entry per schedule day
   const sessions = useMemo(() => {
     if (!program) return [];
     return program.schedule.map((day) => {
       const session = getSessionTemplate(program, day.sessionId);
-      const weeklyWorkout = workouts.find(
+      const weeklyWorkout = cycleWorkouts.find(
         (w) => w.weekNumber === week && w.sessionType === session.id
       );
       const totalSets = session.exercises.reduce((sum, ex) => {
@@ -55,13 +66,13 @@ export default function WeekView() {
         isToday: week === currentWeek,
       };
     });
-  }, [program, week, workouts, currentWeek]);
+  }, [program, week, cycleWorkouts, currentWeek]);
 
   // Volume per week: sum of weight × reps for completed sets
   const volumeByWeek = useMemo(() => {
     return Array.from({ length: totalWeeks }, (_, i) => {
       const wn = i + 1;
-      const logsForWeek = exerciseLogs.filter((l) => l.weekNumber === wn);
+      const logsForWeek = cycleExerciseLogs.filter((l) => l.weekNumber === wn);
       return logsForWeek.reduce((total, log) => {
         return (
           total +
@@ -71,7 +82,7 @@ export default function WeekView() {
         );
       }, 0);
     });
-  }, [exerciseLogs, totalWeeks]);
+  }, [cycleExerciseLogs, totalWeeks]);
 
   if (!program) return null;
 

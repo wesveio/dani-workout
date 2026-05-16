@@ -26,6 +26,7 @@ export default function Settings() {
 
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [openReset, setOpenReset] = useState(false)
+  const [openRestart, setOpenRestart] = useState(false)
   const [openNewProfile, setOpenNewProfile] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
 
@@ -62,6 +63,12 @@ export default function Settings() {
     await reset()
     toast({ title: 'Dados apagados', description: `Registros de ${active?.shortName} removidos. Configurações preservadas.` })
     setOpenReset(false)
+  }
+
+  const onRestartProgram = async () => {
+    await saveSettings({ programStart: new Date().toISOString() })
+    toast({ title: 'Programa reiniciado', description: 'Semana 1 a partir de hoje. Histórico preservado.' })
+    setOpenRestart(false)
   }
 
   const onAddProfile = async () => {
@@ -120,6 +127,19 @@ export default function Settings() {
               {dayjs(settings.programStart).format('YYYY-MM-DD')}
             </span>
           </div>
+
+          {/* Reiniciar programa */}
+          <button
+            type='button'
+            onClick={() => setOpenRestart(true)}
+            className='flex w-full items-center justify-between px-3.5 py-3 text-left'
+          >
+            <div>
+              <div className='text-[13px]'>Reiniciar programa</div>
+              <div className='text-[11px] text-txt-faint'>Voltar para semana 1. Histórico preservado.</div>
+            </div>
+            <span className='text-txt-faint'>↺</span>
+          </button>
 
           {/* Recuperação +1 série */}
           <div className='flex items-center justify-between px-3.5 py-3'>
@@ -216,6 +236,26 @@ export default function Settings() {
             </Button>
             <Button className='bg-red-500 text-white hover:bg-red-600' onClick={onReset}>
               Confirmar reset
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restart program dialog */}
+      <Dialog open={openRestart} onOpenChange={setOpenRestart}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reiniciar programa?</DialogTitle>
+            <DialogDescription>
+              A data de início passa para hoje e o programa volta para Semana 1. Os treinos anteriores ficam preservados em Histórico, mas não contam mais na semana atual.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='mt-4 flex justify-end gap-2'>
+            <Button variant='secondary' onClick={() => setOpenRestart(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onRestartProgram}>
+              Reiniciar
             </Button>
           </div>
         </DialogContent>
