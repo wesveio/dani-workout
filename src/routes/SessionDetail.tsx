@@ -7,7 +7,12 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  History as HistoryIcon,
   MoreVertical,
+  Plus,
+  StickyNote,
+  Timer,
+  Trash2,
   X,
 } from 'lucide-react';
 import { computeTargetsForWeek, formatTargetText, getWeekInfo } from '@/lib/program';
@@ -28,9 +33,18 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { exerciseCatalog } from '@/data/exerciseCatalog';
+import { exerciseCatalog, type CatalogExercise } from '@/data/exerciseCatalog';
+import type { Exercise } from '@/data/programTypes';
 
 type ExerciseState = {
   sets: SetEntry[];
@@ -39,12 +53,14 @@ type ExerciseState = {
 
 type SessionFooterProps = {
   progress: { total: number; completed: number; percent: number };
+  canFinish: boolean;
   onFinish: () => void;
   onBack: () => void;
 };
 
 const SessionFooter = memo(function SessionFooter({
   progress,
+  canFinish,
   onFinish,
   onBack,
 }: SessionFooterProps) {
@@ -68,7 +84,7 @@ const SessionFooter = memo(function SessionFooter({
             </div>
           </div>
           <div className='flex flex-wrap gap-2'>
-            <Button onClick={onFinish} size='lg'>
+            <Button onClick={onFinish} size='lg' disabled={!canFinish}>
               <Check className='mr-2 h-5 w-5' />
               Finalizar sessão
             </Button>
@@ -147,6 +163,12 @@ export default function SessionDetail() {
   >({});
   const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [extraExercises, setExtraExercises] = useState<Exercise[]>([]);
+  const [removedExerciseIds, setRemovedExerciseIds] = useState<Set<string>>(new Set());
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
@@ -214,8 +236,14 @@ export default function SessionDetail() {
   const defaultRestSeconds = useWorkoutStore((s) => s.settings.defaultRestSeconds)
   const setExerciseRestSeconds = useWorkoutStore((s) => s.setExerciseRestSeconds)
   const [restSheetExerciseId, setRestSheetExerciseId] = useState<string | null>(null)
-  const draftKey = `session-draft-${activeUserId}-${activeSessionType}-${activeWeek}`;
-  const orderKey = `session-order-${activeUserId}-${activeSessionType}-${activeWeek}`;
+  const templateId = (location.state as { templateId?: string } | null)?.templateId;
+  const sessionScope = isTemplateMode
+    ? `template-${templateId ?? 'adhoc'}`
+    : activeSessionType;
+  const draftKey = `session-draft-${activeUserId}-${sessionScope}-${activeWeek}`;
+  const orderKey = `session-order-${activeUserId}-${sessionScope}-${activeWeek}`;
+  const extrasKey = `session-extras-${activeUserId}-${sessionScope}-${activeWeek}`;
+  const removedKey = `session-removed-${activeUserId}-${sessionScope}-${activeWeek}`;
   const progress = useMemo(() => {
     const totals = Object.values(exerciseState).reduce(
       (acc, ex) => {
@@ -289,28 +317,63 @@ export default function SessionDetail() {
   useEffect(() => {
     if (!effectiveSession) return;
     const sessionIds = effectiveSession.exercises.map((e) => e.id);
-    let restored: string[] | null = null;
+
+    let restoredExtras: Exercise[] = [];
+    try {
+      const raw = localStorage.getItem(extrasKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Exercise[];
+        if (Array.isArray(parsed)) restoredExtras = parsed;
+      }
+    } catch (err) {
+      console.warn('Extras inválidos, ignorando.', err);
+      localStorage.removeItem(extrasKey);
+    }
+
+    let restoredRemoved: Set<string> = new Set();
+    try {
+      const raw = localStorage.getItem(removedKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed)) restoredRemoved = new Set(parsed);
+      }
+    } catch (err) {
+      console.warn('Removidos inválidos, ignorando.', err);
+      localStorage.removeItem(removedKey);
+    }
+
+    const allIds = [
+      ...sessionIds,
+      ...restoredExtras.map((e) => e.id),
+    ].filter((id) => !restoredRemoved.has(id));
+
+    let restoredOrder: string[] | null = null;
     try {
       const raw = localStorage.getItem(orderKey);
       if (raw) {
         const parsed = JSON.parse(raw) as string[];
         if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
-          const filtered = parsed.filter((id) => sessionIds.includes(id));
-          sessionIds.forEach((id) => {
+          const filtered = parsed.filter((id) => allIds.includes(id));
+          allIds.forEach((id) => {
             if (!filtered.includes(id)) filtered.push(id);
           });
-          restored = filtered;
+          restoredOrder = filtered;
         }
       }
     } catch (err) {
       console.warn('Ordem inválida, ignorando.', err);
       localStorage.removeItem(orderKey);
     }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setExerciseOrder(restored ?? sessionIds);
+    setExtraExercises(restoredExtras);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRemovedExerciseIds(restoredRemoved);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExerciseOrder(restoredOrder ?? allIds);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedExerciseId(null);
-  }, [effectiveSession, orderKey]);
+  }, [effectiveSession, orderKey, extrasKey, removedKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -401,10 +464,9 @@ export default function SessionDetail() {
         })
       }
 
-      // Auto-advance focus (LOG-03) — scans all exercises in session order
+      // Auto-advance focus (LOG-03) — scans exercises in current (possibly reordered) order
       requestAnimationFrame(() => {
-        if (!effectiveSession) return
-        for (const ex of effectiveSession.exercises) {
+        for (const ex of exercises) {
           const state = exerciseState[ex.id]
           if (!state) continue
           for (let i = 0; i < state.sets.length; i++) {
@@ -469,8 +531,7 @@ export default function SessionDetail() {
     setExerciseState((prev) => {
       const current = prev[exerciseId];
       if (!current) return prev;
-      if (!effectiveSession) return prev;
-      const exercise = effectiveSession.exercises.find((e) => e.id === exerciseId);
+      const exercise = exercises.find((e) => e.id === exerciseId);
       if (!exercise) return prev;
       const targets = targetsByExercise.get(exercise.id) ?? [];
       let repRange: [number, number] = [10, 12];
@@ -507,8 +568,186 @@ export default function SessionDetail() {
     setHasUnsaved(true);
   };
 
+  const filteredCatalog = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    if (!q) return exerciseCatalog;
+    return exerciseCatalog.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.muscleGroup.toLowerCase().includes(q)
+    );
+  }, [catalogSearch]);
+
+  const handleAddExercise = (catalogEntry: CatalogExercise) => {
+    if (removedExerciseIds.has(catalogEntry.id)) {
+      setRemovedExerciseIds((prev) => {
+        const next = new Set(prev);
+        next.delete(catalogEntry.id);
+        try {
+          localStorage.setItem(removedKey, JSON.stringify(Array.from(next)));
+        } catch (err) {
+          console.warn('Falha ao persistir removidos.', err);
+        }
+        return next;
+      });
+    }
+    const alreadyVisible = exercises.some((e) => e.id === catalogEntry.id);
+    if (alreadyVisible) {
+      toast({ title: 'Exercício já está no treino.' });
+      return;
+    }
+    const isInSession =
+      effectiveSession?.exercises.some((e) => e.id === catalogEntry.id) ?? false;
+    if (!isInSession) {
+      const newEx: Exercise = {
+        id: catalogEntry.id,
+        name: catalogEntry.name,
+        focus: catalogEntry.focus,
+        rest: `${catalogEntry.defaultRest}s`,
+        rir: '2',
+        prescriptions: [],
+        imageUrl: catalogEntry.imageUrl,
+        videoUrl: catalogEntry.videoUrl,
+      };
+      setExtraExercises((prev) => {
+        const next = [...prev, newEx];
+        try {
+          localStorage.setItem(extrasKey, JSON.stringify(next));
+        } catch (err) {
+          console.warn('Falha ao persistir extras.', err);
+        }
+        return next;
+      });
+    }
+    setExerciseOrder((prev) => {
+      if (prev.includes(catalogEntry.id)) return prev;
+      const next = [...prev, catalogEntry.id];
+      try {
+        localStorage.setItem(orderKey, JSON.stringify(next));
+      } catch (err) {
+        console.warn('Falha ao persistir ordem.', err);
+      }
+      return next;
+    });
+    setExerciseState((prev) => {
+      if (prev[catalogEntry.id]) return prev;
+      const lastLog = lastLogsByExercise.get(catalogEntry.id);
+      const targets = targetsByExercise.get(catalogEntry.id) ?? [];
+      const totalSets = targets.length
+        ? targets.reduce((sum, t) => sum + t.targetSets, 0)
+        : 3;
+      const repRange: [number, number] = targets[0]?.repRange ?? [8, 12];
+      return {
+        ...prev,
+        [catalogEntry.id]: {
+          sets: createDefaultSets(totalSets, repRange, lastLog?.sets),
+          notes: '',
+        },
+      };
+    });
+    setHasUnsaved(true);
+    setSelectedExerciseId(catalogEntry.id);
+    setAddExerciseOpen(false);
+    setCatalogSearch('');
+  };
+
+  const handleRemoveExercise = (id: string) => {
+    if (!window.confirm('Remover este exercício do treino?')) return;
+    const isInSession =
+      effectiveSession?.exercises.some((e) => e.id === id) ?? false;
+    if (isInSession) {
+      setRemovedExerciseIds((prev) => {
+        const next = new Set(prev).add(id);
+        try {
+          localStorage.setItem(removedKey, JSON.stringify(Array.from(next)));
+        } catch (err) {
+          console.warn('Falha ao persistir removidos.', err);
+        }
+        return next;
+      });
+    } else {
+      setExtraExercises((prev) => {
+        const next = prev.filter((e) => e.id !== id);
+        try {
+          localStorage.setItem(extrasKey, JSON.stringify(next));
+        } catch (err) {
+          console.warn('Falha ao persistir extras.', err);
+        }
+        return next;
+      });
+    }
+    setExerciseOrder((prev) => {
+      const next = prev.filter((x) => x !== id);
+      try {
+        localStorage.setItem(orderKey, JSON.stringify(next));
+      } catch (err) {
+        console.warn('Falha ao persistir ordem.', err);
+      }
+      return next;
+    });
+    setExerciseState((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setSelectedExerciseId((prev) => (prev === id ? null : prev));
+    setHasUnsaved(true);
+  };
+
+  const handleDiscardDraft = () => {
+    if (!window.confirm('Descartar rascunho e recomeçar?')) return;
+    localStorage.removeItem(draftKey);
+    localStorage.removeItem(orderKey);
+    localStorage.removeItem(extrasKey);
+    localStorage.removeItem(removedKey);
+    setExerciseState(initialExerciseState);
+    if (effectiveSession) {
+      setExerciseOrder(effectiveSession.exercises.map((e) => e.id));
+    }
+    setExtraExercises([]);
+    setRemovedExerciseIds(new Set());
+    setSelectedExerciseId(null);
+    setHasUnsaved(false);
+    toast({ title: 'Rascunho descartado.' });
+  };
+
+  const goToHistory = (id: string) => {
+    if (hasUnsaved) {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(exerciseState));
+      } catch (err) {
+        console.warn('Falha ao salvar rascunho antes de navegar.', err);
+      }
+    }
+    navigate(`/exercise/${id}`);
+  };
+
+  const openNotesDialog = () => {
+    if (!activeExercise) return;
+    setNotesDraft(exerciseState[activeExercise.id]?.notes ?? '');
+    setNotesDialogOpen(true);
+  };
+
+  const saveNotes = () => {
+    if (!activeExercise) return;
+    setExerciseState((prev) => {
+      const current = prev[activeExercise.id];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [activeExercise.id]: { ...current, notes: notesDraft },
+      };
+    });
+    setHasUnsaved(true);
+    setNotesDialogOpen(false);
+  };
+
   const finishSession = async () => {
     if (!effectiveSession) return;
+    if (!exercises.length) {
+      toast({ title: 'Adicione pelo menos um exercício para salvar.' });
+      return;
+    }
     try {
       const workoutDate = dayjs().toISOString();
       await logSession({
@@ -541,6 +780,8 @@ export default function SessionDetail() {
       });
       localStorage.removeItem(draftKey);
       localStorage.removeItem(orderKey);
+      localStorage.removeItem(extrasKey);
+      localStorage.removeItem(removedKey);
       setHasUnsaved(false);
       setCelebrating(true);
     } catch (err) {
@@ -554,18 +795,20 @@ export default function SessionDetail() {
   };
 
   const exercises = useMemo(() => {
-    const base = effectiveSession?.exercises ?? [];
-    if (!exerciseOrder.length) return base;
-    const byId = new Map(base.map((e) => [e.id, e]));
+    const sessionList = effectiveSession?.exercises ?? [];
+    const merged = [...sessionList, ...extraExercises].filter(
+      (e) => !removedExerciseIds.has(e.id)
+    );
+    if (!exerciseOrder.length) return merged;
+    const byId = new Map(merged.map((e) => [e.id, e]));
     const ordered = exerciseOrder
       .map((id) => byId.get(id))
       .filter((e): e is NonNullable<typeof e> => Boolean(e));
-    // Append any session exercises not yet in order (e.g. data shape changed)
-    base.forEach((e) => {
+    merged.forEach((e) => {
       if (!exerciseOrder.includes(e.id)) ordered.push(e);
     });
     return ordered;
-  }, [effectiveSession, exerciseOrder]);
+  }, [effectiveSession, extraExercises, removedExerciseIds, exerciseOrder]);
 
   // Active exercise index: respects manual selection (unless that exercise is fully complete,
   // in which case auto-advance to the next incomplete one), otherwise first with an uncompleted set.
@@ -746,6 +989,95 @@ export default function SessionDetail() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className='bg-surface border-neutral/50 max-w-sm'>
+          <DialogHeader>
+            <DialogTitle>Notas — {activeExercise?.name ?? ''}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            placeholder='Como foi? Carga, dor, técnica…'
+            rows={5}
+          />
+          <div className='flex gap-2 mt-3'>
+            <Button className='flex-1 min-h-[44px]' onClick={saveNotes}>
+              Salvar
+            </Button>
+            <Button
+              variant='ghost'
+              className='min-h-[44px]'
+              onClick={() => setNotesDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={addExerciseOpen}
+        onOpenChange={(open) => {
+          setAddExerciseOpen(open);
+          if (!open) setCatalogSearch('');
+        }}
+      >
+        <DialogContent className='bg-surface border-neutral/50 max-w-md flex flex-col gap-0 p-0'>
+          <DialogHeader className='px-5 pt-5 pb-3'>
+            <DialogTitle>Adicionar exercício</DialogTitle>
+          </DialogHeader>
+          <div className='px-5'>
+            <Input
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder='Buscar por nome ou grupo…'
+              className='min-h-[44px]'
+            />
+          </div>
+          <div className='px-5 py-3 space-y-1 max-h-[50vh] overflow-y-auto'>
+            {filteredCatalog.length === 0 && (
+              <div className='text-sm text-txt-faint text-center py-4'>
+                Nenhum exercício encontrado.
+              </div>
+            )}
+            {filteredCatalog.map((c) => {
+              const alreadyIn = exercises.some((e) => e.id === c.id);
+              return (
+                <button
+                  key={c.id}
+                  type='button'
+                  disabled={alreadyIn}
+                  onClick={() => handleAddExercise(c)}
+                  className='w-full flex items-center gap-2 rounded-card bg-bg-1 p-2 text-left disabled:opacity-40'
+                >
+                  <ExerciseThumb src={c.imageUrl} alt={c.name} />
+                  <div className='flex-1'>
+                    <div className='text-[13px] font-medium'>{c.name}</div>
+                    <div className='text-[9px] uppercase tracking-[0.15em] text-txt-faint'>
+                      {c.muscleGroup} · {c.defaultRest}s descanso
+                    </div>
+                  </div>
+                  {alreadyIn ? (
+                    <Check className='h-4 w-4 text-lime' />
+                  ) : (
+                    <Plus className='h-4 w-4 text-txt-faint' />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className='px-5 pb-5 pt-2'>
+            <Button
+              variant='ghost'
+              className='w-full min-h-[44px]'
+              onClick={() => setAddExerciseOpen(false)}
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Top bar */}
       <header className='flex items-center justify-between'>
         <button
@@ -762,9 +1094,67 @@ export default function SessionDetail() {
           </div>
           <div className='mt-0.5 text-sm font-medium'>{sessionSubtitle}</div>
         </div>
-        <button type='button' aria-label='Mais opções' className='text-txt-faint'>
-          <MoreVertical className='h-5 w-5' />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type='button' aria-label='Mais opções' className='text-txt-faint'>
+              <MoreVertical className='h-5 w-5' />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end' className='w-56'>
+            <DropdownMenuItem
+              onSelect={() => {
+                setTemplateName(generateTemplateName());
+                setSaveTemplateOpen(true);
+              }}
+            >
+              <BookmarkPlus className='mr-2 h-4 w-4' />
+              Salvar como Template
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!activeExercise}
+              onSelect={() => {
+                if (activeExercise) setRestSheetExerciseId(activeExercise.id);
+              }}
+            >
+              <Timer className='mr-2 h-4 w-4' />
+              Ajustar descanso
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setAddExerciseOpen(true)}>
+              <Plus className='mr-2 h-4 w-4' />
+              Adicionar exercício
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!activeExercise}
+              onSelect={() => {
+                if (activeExercise) handleRemoveExercise(activeExercise.id);
+              }}
+            >
+              <Trash2 className='mr-2 h-4 w-4' />
+              Remover exercício atual
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!activeExercise}
+              onSelect={() => {
+                if (activeExercise) goToHistory(activeExercise.id);
+              }}
+            >
+              <HistoryIcon className='mr-2 h-4 w-4' />
+              Histórico do exercício
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!activeExercise}
+              onSelect={openNotesDialog}
+            >
+              <StickyNote className='mr-2 h-4 w-4' />
+              Notas do exercício
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={handleDiscardDraft}>
+              <X className='mr-2 h-4 w-4' />
+              Descartar rascunho
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       {hasUnsaved && (
@@ -939,6 +1329,7 @@ export default function SessionDetail() {
 
       <SessionFooter
         progress={progress}
+        canFinish={exercises.length > 0}
         onFinish={finishSession}
         onBack={navigateBack}
       />
