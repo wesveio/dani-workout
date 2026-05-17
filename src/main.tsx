@@ -9,6 +9,11 @@ import { Toaster } from './components/ui/use-toast'
 
 dayjs.locale('pt-br')
 
+const orientation = screen.orientation as
+  | (ScreenOrientation & { lock?: (o: 'portrait') => Promise<void> })
+  | undefined
+orientation?.lock?.('portrait').catch(() => {})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
