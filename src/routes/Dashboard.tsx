@@ -253,13 +253,13 @@ export default function Dashboard() {
               <li key={pr.exerciseId}>
                 <Link
                   to={`/exercise/${pr.exerciseId}`}
-                  className='flex items-center justify-between py-2 active:opacity-80'
+                  className='flex items-center justify-between gap-3 py-2 active:opacity-80'
                 >
-                  <div className='flex items-center gap-2'>
-                    <span className='w-5 text-xs text-txt-faint'>{idx + 1}.</span>
-                    <span className='text-sm font-semibold truncate'>{pr.exerciseName}</span>
+                  <div className='flex min-w-0 flex-1 items-center gap-2'>
+                    <span className='w-5 shrink-0 text-xs text-txt-faint'>{idx + 1}.</span>
+                    <span className='min-w-0 flex-1 truncate text-sm font-semibold'>{pr.exerciseName}</span>
                   </div>
-                  <span className='text-xs text-txt-faint shrink-0'>
+                  <span className='shrink-0 text-xs text-txt-faint'>
                     {pr.weight}kg × {pr.reps}
                   </span>
                 </Link>

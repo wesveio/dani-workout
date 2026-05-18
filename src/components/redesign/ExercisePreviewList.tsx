@@ -28,9 +28,9 @@ export function ExercisePreviewList({
           <li
             key={it.id}
             data-testid='preview-row'
-            className='flex items-center justify-between text-sm'
+            className='flex items-center justify-between gap-3 text-sm'
           >
-            <span className='truncate pr-2'>{it.name}</span>
+            <span className='min-w-0 flex-1 truncate'>{it.name}</span>
             <span className='shrink-0 text-xs text-txt-faint'>{it.setsText}</span>
           </li>
         ))}
