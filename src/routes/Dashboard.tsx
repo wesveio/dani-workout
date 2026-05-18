@@ -1,10 +1,10 @@
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById } from '@/lib/program'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek } from '@/lib/program'
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
-import { PrimaryCTA, AderenciaDots, Sparkline } from '@/components/redesign'
+import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList } from '@/components/redesign'
 import type { DayState } from '@/components/redesign'
 
 // Day-of-week index (0=Mon…6=Sun) for each Portuguese day name
@@ -45,6 +45,16 @@ export default function Dashboard() {
     return acc + sets
   }, 0)
 
+  const nextSession = getNextSession(today, program.schedule)
+  const previewItems = sessionTemplate.exercises.map((ex) => {
+    // Use computeTargetsForWeek so finishers / pump sets / volume bumps are included.
+    const targets = computeTargetsForWeek(ex, weekNumber, settings.recoveryExcellent)
+    const setsText = targets.length === 0
+      ? '—'
+      : targets.map((t) => `${t.targetSets}x${t.repRange[0]}–${t.repRange[1]}`).join(' + ')
+    return { id: ex.id, name: ex.name, setsText }
+  })
+
   // Aderência dots — current week Mon–Sun
   // Force Monday: dayjs startOf('week') is Sunday in some locales
   const monday = dayjs().subtract((today.day() + 6) % 7, 'day').startOf('day')
@@ -78,6 +88,12 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <ProgressBar
+        current={weekNumber}
+        total={program.durationWeeks}
+        label='Programa'
+      />
+
       {/* Today's session block */}
       <div className='flex flex-col gap-1'>
         <p className='text-[11px] font-semibold uppercase tracking-widest text-txt-faint'>
@@ -87,12 +103,23 @@ export default function Dashboard() {
           {sessionTemplate.title}
         </h1>
         <p className='text-sm text-txt-faint'>{sessionTemplate.subtitle}</p>
+        {nextSession && (
+          <p className='text-xs text-txt-faint'>
+            Próximo: Treino {nextSession.sessionId} · {nextSession.dayLabel}
+            {nextSession.daysAhead === 1 ? ' (amanhã)' : ''}
+          </p>
+        )}
       </div>
 
       {/* Primary CTA */}
       <PrimaryCTA
         label='Iniciar treino'
         to={`/session/${sessionTemplate.id}/${weekNumber}`}
+      />
+
+      <ExercisePreviewList
+        items={previewItems}
+        href={`/session/${sessionTemplate.id}/${weekNumber}`}
       />
 
       {/* Prescription card */}
