@@ -231,6 +231,39 @@ export const getWeekTonnage = (
   return { current, previous, delta, deltaPct }
 }
 
+export type LastWorkoutSummary = {
+  sessionType: SessionType
+  daysAgo: number
+  completedSets: number
+  topWeight: number
+}
+
+export const getLastWorkoutSummary = (
+  workouts: Array<{ id: string; date: string; sessionType: SessionType }>,
+  exerciseLogs: Array<{ workoutId: string; sets: Array<{ weight: number; reps: number; completed: boolean }> }>,
+  today: dayjs.Dayjs,
+): LastWorkoutSummary | null => {
+  if (workouts.length === 0) return null
+  const sorted = [...workouts].sort((a, b) => b.date.localeCompare(a.date))
+  const last = sorted[0]
+  const logs = exerciseLogs.filter((l) => l.workoutId === last.id)
+  let completedSets = 0
+  let topWeight = 0
+  for (const log of logs) {
+    for (const s of log.sets) {
+      if (!s.completed) continue
+      completedSets++
+      if (s.weight > topWeight) topWeight = s.weight
+    }
+  }
+  return {
+    sessionType: last.sessionType,
+    daysAgo: today.startOf('day').diff(dayjs(last.date).startOf('day'), 'day'),
+    completedSets,
+    topWeight,
+  }
+}
+
 export const getStreak = (
   logs: Array<{ date: string }>,
   today: dayjs.Dayjs,

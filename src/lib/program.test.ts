@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
-import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage } from './program'
+import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage, getLastWorkoutSummary } from './program'
 import type { ExerciseLog } from '@/types'
 import { treinoDani } from '@/data/treinoDani'
 
@@ -225,5 +225,36 @@ describe('getWeekTonnage', () => {
     const logs = [mk('2026-05-11')]
     const result = getWeekTonnage(logs, '2026-05-11')
     expect(result.deltaPct).toBeNull()
+  })
+})
+
+describe('getLastWorkoutSummary', () => {
+  it('returns null with no workouts', () => {
+    expect(getLastWorkoutSummary([], [], dayjs('2026-05-17'))).toBeNull()
+  })
+
+  it('returns the most recent workout with set count and top weight', () => {
+    const today = dayjs('2026-05-17')
+    const workouts = [
+      { id: 'w1', date: '2026-05-15', sessionType: 'A' as const },
+      { id: 'w2', date: '2026-05-10', sessionType: 'B' as const },
+    ]
+    const exerciseLogs = [
+      { workoutId: 'w1', sets: [
+        { weight: 50, reps: 8, completed: true },
+        { weight: 60, reps: 6, completed: true },
+        { weight: 60, reps: 5, completed: false },
+      ] },
+      { workoutId: 'w2', sets: [
+        { weight: 70, reps: 5, completed: true },
+      ] },
+    ]
+    const result = getLastWorkoutSummary(workouts, exerciseLogs, today)
+    expect(result).toMatchObject({
+      sessionType: 'A',
+      daysAgo: 2,
+      completedSets: 2,
+      topWeight: 60,
+    })
   })
 })
