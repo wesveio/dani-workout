@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek } from '@/lib/program'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage } from '@/lib/program'
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList } from '@/components/redesign'
@@ -64,6 +64,11 @@ export default function Dashboard() {
   const cycleWorkouts = workouts.filter((w) => w.date >= settings.programStart)
   const rawStates = getWeekStates(cycleWorkouts, weekStartStr, scheduledIndices)
   const weekStates: DayState[] = rawStates
+
+  const tonnage = getWeekTonnage(
+    exerciseLogs.filter((l) => l.date >= settings.programStart),
+    weekStartStr,
+  )
 
   // Adherence count for current week
   const weekDoneCount = weekStates.filter((s) => s === 'done').length
@@ -155,6 +160,19 @@ export default function Dashboard() {
           </p>
         </div>
         <AderenciaDots states={weekStates} />
+        <div className='flex items-center justify-between border-t border-white/10 pt-2 text-sm'>
+          <span className='text-txt-faint'>Tonelagem</span>
+          <span className='font-semibold'>{tonnage.current.toLocaleString('pt-BR')} kg</span>
+        </div>
+        {tonnage.deltaPct !== null && (
+          <div className='flex items-center justify-between text-xs'>
+            <span className='text-txt-faint'>vs semana anterior</span>
+            <span className={tonnage.delta >= 0 ? 'text-lime' : 'text-red-400'}>
+              {tonnage.delta >= 0 ? '+' : ''}
+              {tonnage.deltaPct}%
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Recent PR card */}
