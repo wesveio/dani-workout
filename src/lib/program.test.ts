@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
-import { getWeekStates, getRecentPr, getNextSession, getStreak } from './program'
+import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage } from './program'
 import type { ExerciseLog } from '@/types'
 import { treinoDani } from '@/data/treinoDani'
 
@@ -172,5 +172,58 @@ describe('getStreak', () => {
     const today = dayjs('2026-05-17')
     const logs = [mk('2026-05-17'), mk('2026-05-17'), mk('2026-05-16')]
     expect(getStreak(logs, today)).toBe(2)
+  })
+})
+
+describe('getWeekTonnage', () => {
+  const baseSet = { weight: 40, reps: 10, rir: 2, completed: true }
+  const mk = (date: string, sets = [baseSet]) => ({
+    date,
+    sets,
+    completed: true,
+  })
+
+  it('returns zeros when no logs', () => {
+    expect(getWeekTonnage([], '2026-05-11')).toEqual({
+      current: 0,
+      previous: 0,
+      delta: 0,
+      deltaPct: null,
+    })
+  })
+
+  it('sums weight*reps for completed sets in current week', () => {
+    const logs = [
+      mk('2026-05-11'), // Monday current
+      mk('2026-05-13', [baseSet, baseSet]),
+    ]
+    const result = getWeekTonnage(logs, '2026-05-11')
+    expect(result.current).toBe(40 * 10 + 40 * 10 * 2)
+    expect(result.previous).toBe(0)
+  })
+
+  it('ignores incomplete sets', () => {
+    const logs = [
+      { date: '2026-05-11', sets: [{ weight: 40, reps: 10, rir: 2, completed: false }] },
+    ]
+    expect(getWeekTonnage(logs, '2026-05-11').current).toBe(0)
+  })
+
+  it('computes delta and deltaPct vs previous week', () => {
+    const logs = [
+      mk('2026-05-11'), // current week start (Mon)
+      mk('2026-05-04'), // previous week
+    ]
+    const result = getWeekTonnage(logs, '2026-05-11')
+    expect(result.current).toBe(400)
+    expect(result.previous).toBe(400)
+    expect(result.delta).toBe(0)
+    expect(result.deltaPct).toBe(0)
+  })
+
+  it('deltaPct is null when previous week is 0', () => {
+    const logs = [mk('2026-05-11')]
+    const result = getWeekTonnage(logs, '2026-05-11')
+    expect(result.deltaPct).toBeNull()
   })
 })

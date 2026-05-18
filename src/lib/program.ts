@@ -197,6 +197,40 @@ export const getNextSession = (
   return null
 }
 
+export type WeekTonnage = {
+  current: number
+  previous: number
+  delta: number
+  deltaPct: number | null
+}
+
+export const getWeekTonnage = (
+  exerciseLogs: Array<{ date: string; sets: Array<{ weight: number; reps: number; completed: boolean }> }>,
+  weekStartIso: string,
+): WeekTonnage => {
+  const weekStart = dayjs(weekStartIso).startOf('day')
+  const weekEnd = weekStart.add(7, 'day')
+  const prevStart = weekStart.subtract(7, 'day')
+
+  const sumRange = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
+    let total = 0
+    for (const log of exerciseLogs) {
+      const d = dayjs(log.date)
+      if (d.isBefore(from) || !d.isBefore(to)) continue
+      for (const s of log.sets) {
+        if (s.completed) total += s.weight * s.reps
+      }
+    }
+    return total
+  }
+
+  const current = sumRange(weekStart, weekEnd)
+  const previous = sumRange(prevStart, weekStart)
+  const delta = current - previous
+  const deltaPct = previous === 0 ? null : Math.round((delta / previous) * 100)
+  return { current, previous, delta, deltaPct }
+}
+
 export const getStreak = (
   logs: Array<{ date: string }>,
   today: dayjs.Dayjs,
