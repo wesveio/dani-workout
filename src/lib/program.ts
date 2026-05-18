@@ -196,3 +196,23 @@ export const getNextSession = (
   }
   return null
 }
+
+export const getStreak = (
+  logs: Array<{ date: string }>,
+  today: dayjs.Dayjs,
+): number => {
+  if (logs.length === 0) return 0
+  // Use dayjs to normalize to LOCAL calendar date — `date.slice(0,10)` would use
+  // UTC slicing of ISO timestamps and miscount late-night workouts in TZ-offset locales.
+  const dates = new Set(logs.map((l) => dayjs(l.date).format('YYYY-MM-DD')))
+  const todayIso = today.format('YYYY-MM-DD')
+  const yesterdayIso = today.subtract(1, 'day').format('YYYY-MM-DD')
+  let cursor = dates.has(todayIso) ? today : dates.has(yesterdayIso) ? today.subtract(1, 'day') : null
+  if (!cursor) return 0
+  let count = 0
+  while (dates.has(cursor.format('YYYY-MM-DD'))) {
+    count++
+    cursor = cursor.subtract(1, 'day')
+  }
+  return count
+}

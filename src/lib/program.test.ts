@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
-import { getWeekStates, getRecentPr, getNextSession } from './program'
+import { getWeekStates, getRecentPr, getNextSession, getStreak } from './program'
 import type { ExerciseLog } from '@/types'
 import { treinoDani } from '@/data/treinoDani'
 
@@ -136,5 +136,41 @@ describe('getNextSession', () => {
 
   it('returns null for empty schedule', () => {
     expect(getNextSession(dayjs('2026-05-18'), [])).toBeNull()
+  })
+})
+
+describe('getStreak', () => {
+  const mk = (date: string) => ({ date })
+
+  it('returns 0 when no workouts', () => {
+    expect(getStreak([], dayjs('2026-05-17'))).toBe(0)
+  })
+
+  it('counts consecutive days ending today', () => {
+    const today = dayjs('2026-05-17')
+    const logs = [
+      mk('2026-05-17'),
+      mk('2026-05-16'),
+      mk('2026-05-15'),
+    ]
+    expect(getStreak(logs, today)).toBe(3)
+  })
+
+  it('does not break when today is missing but yesterday is present', () => {
+    const today = dayjs('2026-05-17')
+    const logs = [mk('2026-05-16'), mk('2026-05-15')]
+    expect(getStreak(logs, today)).toBe(2)
+  })
+
+  it('breaks when yesterday is also missing', () => {
+    const today = dayjs('2026-05-17')
+    const logs = [mk('2026-05-15'), mk('2026-05-14')]
+    expect(getStreak(logs, today)).toBe(0)
+  })
+
+  it('deduplicates multiple workouts on the same day', () => {
+    const today = dayjs('2026-05-17')
+    const logs = [mk('2026-05-17'), mk('2026-05-17'), mk('2026-05-16')]
+    expect(getStreak(logs, today)).toBe(2)
   })
 })
