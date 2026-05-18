@@ -1,10 +1,10 @@
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage } from '@/lib/program'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage, getStreak, getLastWorkoutSummary } from '@/lib/program'
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
-import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList } from '@/components/redesign'
+import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList, MetricCard } from '@/components/redesign'
 import type { DayState } from '@/components/redesign'
 
 // Day-of-week index (0=Mon…6=Sun) for each Portuguese day name
@@ -64,6 +64,9 @@ export default function Dashboard() {
   const cycleWorkouts = workouts.filter((w) => w.date >= settings.programStart)
   const rawStates = getWeekStates(cycleWorkouts, weekStartStr, scheduledIndices)
   const weekStates: DayState[] = rawStates
+
+  const streak = getStreak(workouts.filter((w) => w.date >= settings.programStart), today)
+  const lastWorkout = getLastWorkoutSummary(workouts, exerciseLogs, today)
 
   const tonnage = getWeekTonnage(
     exerciseLogs.filter((l) => l.date >= settings.programStart),
@@ -172,6 +175,25 @@ export default function Dashboard() {
               {tonnage.deltaPct}%
             </span>
           </div>
+        )}
+      </div>
+
+      {/* Streak + Last workout */}
+      <div className='grid grid-cols-2 gap-3'>
+        <MetricCard
+          label='Sequência'
+          value={String(streak)}
+          unit={streak === 1 ? 'dia' : 'dias'}
+        />
+        {lastWorkout ? (
+          <MetricCard
+            label='Último treino'
+            value={`Treino ${lastWorkout.sessionType}`}
+            unit={lastWorkout.daysAgo === 0 ? 'hoje' : `há ${lastWorkout.daysAgo}d`}
+            delta={lastWorkout.topWeight > 0 ? `máx. ${lastWorkout.topWeight}kg · ${lastWorkout.completedSets} séries` : undefined}
+          />
+        ) : (
+          <MetricCard label='Último treino' value='—' />
         )}
       </div>
 
