@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage, getStreak, getLastWorkoutSummary } from '@/lib/program'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage, getStreak, getLastWorkoutSummary, getLatestWeightTrend } from '@/lib/program'
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
+import { useBodyMetricsStore } from '@/store/bodyMetricsStore'
 import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList, MetricCard } from '@/components/redesign'
 import type { DayState } from '@/components/redesign'
 
@@ -22,8 +24,22 @@ export default function Dashboard() {
   const workouts = useWorkoutStore((s) => s.workouts)
   const exerciseLogs = useWorkoutStore((s) => s.exerciseLogs)
   const settings = useWorkoutStore((s) => s.settings)
+  const activeUserId = useWorkoutStore((s) => s.activeUserId)
+  const bodyEntries = useBodyMetricsStore((s) => s.entries)
+  const bodyActiveUserId = useBodyMetricsStore((s) => s.activeUserId)
+  const loadBodyMetricsForUser = useBodyMetricsStore((s) => s.loadForUser)
   const profile = useActiveUserProfile()
   const program = useActiveProgram()
+
+  // The body metrics store is only auto-populated when the user visits /corpo
+  // (see src/routes/BodyMetrics.tsx:30-32). The home card needs the same data,
+  // and must refresh whenever the active profile changes.
+  useEffect(() => {
+    if (!activeUserId) return
+    if (bodyActiveUserId !== activeUserId) {
+      void loadBodyMetricsForUser(activeUserId)
+    }
+  }, [activeUserId, bodyActiveUserId, loadBodyMetricsForUser])
 
   if (!program) return null
 
@@ -79,6 +95,11 @@ export default function Dashboard() {
 
   // Recent PR
   const recentPr = getRecentPr(exerciseLogs, (id) => findExerciseById(program, id)?.name)
+
+  // Only compute the trend after the store has loaded the active profile's entries.
+  // Otherwise we'd briefly show the previous profile's weight after a switchUser().
+  const bodyMetricsReady = bodyActiveUserId === activeUserId
+  const weightTrend = bodyMetricsReady ? getLatestWeightTrend(bodyEntries, today) : null
 
   return (
     <div className='flex flex-col gap-4 p-4 pb-24'>
@@ -196,6 +217,23 @@ export default function Dashboard() {
           <MetricCard label='Último treino' value='—' />
         )}
       </div>
+
+      {/* Body weight card */}
+      {weightTrend && (
+        <Link to='/corpo' className='block active:opacity-80'>
+          <MetricCard
+            label='Peso corporal'
+            value={weightTrend.latest.toString()}
+            unit='kg'
+            delta={
+              weightTrend.delta30d === null
+                ? undefined
+                : `${weightTrend.delta30d >= 0 ? '+' : ''}${weightTrend.delta30d.toFixed(1)} kg em 30d`
+            }
+            history={weightTrend.history}
+          />
+        </Link>
+      )}
 
       {/* Recent PR card */}
       {recentPr ? (
