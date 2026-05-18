@@ -2,11 +2,11 @@ import { useEffect } from 'react'
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { getSessionForDate, getCurrentWeekNumber } from '@/lib/date'
-import { getSessionTemplate, getWeekInfo, getWeekStates, getRecentPr, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage, getStreak, getLastWorkoutSummary, getLatestWeightTrend } from '@/lib/program'
+import { getSessionTemplate, getWeekInfo, getWeekStates, getTop3PRs, findExerciseById, getNextSession, computeTargetsForWeek, getWeekTonnage, getStreak, getLastWorkoutSummary, getLatestWeightTrend } from '@/lib/program'
 import { useActiveProgram, useActiveUserProfile } from '@/lib/user'
 import { useWorkoutStore } from '@/store/workoutStore'
 import { useBodyMetricsStore } from '@/store/bodyMetricsStore'
-import { PrimaryCTA, AderenciaDots, Sparkline, ProgressBar, ExercisePreviewList, MetricCard } from '@/components/redesign'
+import { PrimaryCTA, AderenciaDots, ProgressBar, ExercisePreviewList, MetricCard } from '@/components/redesign'
 import type { DayState } from '@/components/redesign'
 
 // Day-of-week index (0=Mon…6=Sun) for each Portuguese day name
@@ -93,8 +93,7 @@ export default function Dashboard() {
   const weekDoneCount = weekStates.filter((s) => s === 'done').length
   const weekTotalScheduled = scheduledIndices.length
 
-  // Recent PR
-  const recentPr = getRecentPr(exerciseLogs, (id) => findExerciseById(program, id)?.name)
+  const topPrs = getTop3PRs(exerciseLogs, (id) => findExerciseById(program, id)?.name)
 
   // Only compute the trend after the store has loaded the active profile's entries.
   // Otherwise we'd briefly show the previous profile's weight after a switchUser().
@@ -235,31 +234,36 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {/* Recent PR card */}
-      {recentPr ? (
-        <Link
-          to={`/history`}
-          className='rounded-2xl bg-bg-2 p-4 flex flex-col gap-3 active:opacity-80'
-        >
+      {topPrs.length > 0 && (
+        <div className='rounded-2xl bg-bg-2 p-4 flex flex-col gap-3'>
           <div className='flex items-center justify-between'>
             <p className='text-xs font-semibold uppercase tracking-widest text-txt-faint'>
-              PR recente
+              PRs recentes
             </p>
-            <span className='text-[10px] text-lime font-semibold'>ver histórico →</span>
+            <Link to='/progress' className='text-[10px] font-semibold text-lime'>
+              ver progresso →
+            </Link>
           </div>
-          <div className='flex items-end justify-between gap-3'>
-            <div>
-              <p className='text-sm font-semibold leading-tight'>{recentPr.exerciseName}</p>
-              <p className='text-xs text-txt-faint'>
-                {recentPr.weight} kg × {recentPr.reps} reps
-              </p>
-            </div>
-            {recentPr.weeklyMaxes.length > 1 && (
-              <Sparkline values={recentPr.weeklyMaxes} className='w-24' />
-            )}
-          </div>
-        </Link>
-      ) : null}
+          <ul className='flex flex-col divide-y divide-white/5'>
+            {topPrs.map((pr, idx) => (
+              <li key={pr.exerciseId}>
+                <Link
+                  to={`/exercise/${pr.exerciseId}`}
+                  className='flex items-center justify-between py-2 active:opacity-80'
+                >
+                  <div className='flex items-center gap-2'>
+                    <span className='w-5 text-xs text-txt-faint'>{idx + 1}.</span>
+                    <span className='text-sm font-semibold truncate'>{pr.exerciseName}</span>
+                  </div>
+                  <span className='text-xs text-txt-faint shrink-0'>
+                    {pr.weight}kg × {pr.reps}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
