@@ -13,3 +13,4 @@ export { MetricCard } from './MetricCard';
 export { ProfileRow } from './ProfileRow';
 export { RestTimerOverlay } from './RestTimerOverlay';
 export { ProgressBar } from './ProgressBar';
+export { ExercisePreviewList } from './ExercisePreviewList';
