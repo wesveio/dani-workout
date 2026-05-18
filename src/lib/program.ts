@@ -164,6 +164,7 @@ export const formatTargetText = (target: SetTarget) => {
   return `${setText} x ${repsText}`
 }
 
+// Indexed by dayjs day(): 0=Sun, 1=Mon … 6=Sat
 const nextSessionDayOrder = [
   'domingo',
   'segunda-feira',

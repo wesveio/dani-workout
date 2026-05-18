@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { getWeekStates, getRecentPr } from './program'
+import dayjs from 'dayjs'
+import { getWeekStates, getRecentPr, getNextSession } from './program'
 import type { ExerciseLog } from '@/types'
+import { treinoDani } from '@/data/treinoDani'
 
 describe('getWeekStates', () => {
   const monday = '2024-01-01' // a Monday
@@ -110,10 +112,6 @@ describe('getRecentPr', () => {
     expect(pr?.exerciseName).toBe('Hip Thrust')
   })
 })
-
-import dayjs from 'dayjs'
-import { getNextSession } from './program'
-import { treinoDani } from '@/data/treinoDani'
 
 describe('getNextSession', () => {
   it('returns the next scheduled session after today even if today is a training day', () => {
