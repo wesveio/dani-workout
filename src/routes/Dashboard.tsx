@@ -93,12 +93,16 @@ export default function Dashboard() {
   const weekDoneCount = weekStates.filter((s) => s === 'done').length
   const weekTotalScheduled = scheduledIndices.length
 
+  // Filter PRs to exercises resolvable in the active program — /exercise/:id route
+  // only resolves program exercises, so unresolved IDs would render "not found".
   const topPrs = getTop3PRs(exerciseLogs, (id) => findExerciseById(program, id)?.name)
+    .filter((pr) => findExerciseById(program, pr.exerciseId) !== undefined)
 
-  // Only compute the trend after the store has loaded the active profile's entries.
-  // Otherwise we'd briefly show the previous profile's weight after a switchUser().
-  const bodyMetricsReady = bodyActiveUserId === activeUserId
-  const weightTrend = bodyMetricsReady ? getLatestWeightTrend(bodyEntries, today) : null
+  // Filter body entries to the active profile to avoid showing the previous
+  // profile's weight when the store's activeUserId has updated but its entries
+  // are still being replaced asynchronously by loadForUser.
+  const profileBodyEntries = bodyEntries.filter((e) => e.userId === activeUserId)
+  const weightTrend = getLatestWeightTrend(profileBodyEntries, today)
 
   return (
     <div className='flex flex-col gap-4 p-4 pb-24'>
