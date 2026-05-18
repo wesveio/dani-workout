@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
-import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage, getLastWorkoutSummary } from './program'
+import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage, getLastWorkoutSummary, getTop3PRs } from './program'
 import type { ExerciseLog } from '@/types'
 import { treinoDani } from '@/data/treinoDani'
 
@@ -225,6 +225,42 @@ describe('getWeekTonnage', () => {
     const logs = [mk('2026-05-11')]
     const result = getWeekTonnage(logs, '2026-05-11')
     expect(result.deltaPct).toBeNull()
+  })
+})
+
+describe('getTop3PRs', () => {
+  it('returns empty list when no logs', () => {
+    expect(getTop3PRs([], () => 'x')).toEqual([])
+  })
+
+  it('returns up to 3 exercises ranked by estimated 1RM', () => {
+    const logs = [
+      { exerciseId: 'a', sets: [{ weight: 100, reps: 5, completed: true }] },
+      { exerciseId: 'b', sets: [{ weight: 80, reps: 10, completed: true }] },
+      { exerciseId: 'c', sets: [{ weight: 60, reps: 6, completed: true }] },
+      { exerciseId: 'd', sets: [{ weight: 50, reps: 5, completed: true }] },
+    ]
+    const result = getTop3PRs(logs, (id) => id.toUpperCase())
+    expect(result).toHaveLength(3)
+    expect(result[0].exerciseId).toBe('a')
+    expect(result[0].exerciseName).toBe('A')
+    expect(result[0].oneRm).toBeGreaterThan(result[1].oneRm)
+  })
+
+  it('keeps the best set per exercise, not the most recent', () => {
+    const logs = [
+      { exerciseId: 'a', sets: [{ weight: 50, reps: 5, completed: true }] },
+      { exerciseId: 'a', sets: [{ weight: 80, reps: 5, completed: true }] },
+    ]
+    const result = getTop3PRs(logs, (id) => id)
+    expect(result[0].weight).toBe(80)
+  })
+
+  it('ignores incomplete sets', () => {
+    const logs = [
+      { exerciseId: 'a', sets: [{ weight: 200, reps: 1, completed: false }] },
+    ]
+    expect(getTop3PRs(logs, (id) => id)).toEqual([])
   })
 })
 

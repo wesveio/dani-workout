@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { Exercise, Phase, Program, ScheduleDay, SessionTemplate, SetTarget } from '@/data/programTypes'
 import type { ExerciseLog, SessionType } from '@/types'
+import { epley } from './epley'
 
 export type DayStateValue = 'done' | 'miss' | 'none'
 
@@ -262,6 +263,40 @@ export const getLastWorkoutSummary = (
     completedSets,
     topWeight,
   }
+}
+
+export type Pr = {
+  exerciseId: string
+  exerciseName: string
+  weight: number
+  reps: number
+  oneRm: number
+}
+
+export const getTop3PRs = (
+  exerciseLogs: Array<{ exerciseId: string; sets: Array<{ weight: number; reps: number; completed: boolean }> }>,
+  findName: (id: string) => string | undefined,
+): Pr[] => {
+  const best = new Map<string, Pr>()
+  for (const log of exerciseLogs) {
+    for (const s of log.sets) {
+      if (!s.completed) continue
+      const oneRm = epley(s.weight, s.reps)
+      const cur = best.get(log.exerciseId)
+      if (!cur || oneRm > cur.oneRm) {
+        best.set(log.exerciseId, {
+          exerciseId: log.exerciseId,
+          exerciseName: findName(log.exerciseId) ?? log.exerciseId,
+          weight: s.weight,
+          reps: s.reps,
+          oneRm,
+        })
+      }
+    }
+  }
+  return Array.from(best.values())
+    .sort((a, b) => b.oneRm - a.oneRm)
+    .slice(0, 3)
 }
 
 export const getStreak = (
