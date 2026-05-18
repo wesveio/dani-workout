@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import type { Exercise, Phase, Program, SessionTemplate, SetTarget } from '@/data/programTypes'
+import type { Exercise, Phase, Program, ScheduleDay, SessionTemplate, SetTarget } from '@/data/programTypes'
 import type { ExerciseLog, SessionType } from '@/types'
 
 export type DayStateValue = 'done' | 'miss' | 'none'
@@ -162,4 +162,36 @@ export const formatTargetText = (target: SetTarget) => {
     : `${target.sets} séries`
   const repsText = `${target.repRange[0]}–${target.repRange[1]} repetições`
   return `${setText} x ${repsText}`
+}
+
+const nextSessionDayOrder = [
+  'domingo',
+  'segunda-feira',
+  'terça-feira',
+  'quarta-feira',
+  'quinta-feira',
+  'sexta-feira',
+  'sábado',
+] as const
+
+export type NextSession = {
+  sessionId: SessionType
+  dayLabel: string
+  daysAhead: number
+}
+
+export const getNextSession = (
+  from: dayjs.Dayjs,
+  schedule: ScheduleDay[],
+): NextSession | null => {
+  if (schedule.length === 0) return null
+  for (let offset = 1; offset <= 7; offset++) {
+    const day = from.add(offset, 'day')
+    const name = nextSessionDayOrder[day.day()]
+    const match = schedule.find((s) => s.day.toLowerCase() === name)
+    if (match) {
+      return { sessionId: match.sessionId, dayLabel: match.day, daysAhead: offset }
+    }
+  }
+  return null
 }

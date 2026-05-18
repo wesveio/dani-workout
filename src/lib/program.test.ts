@@ -110,3 +110,33 @@ describe('getRecentPr', () => {
     expect(pr?.exerciseName).toBe('Hip Thrust')
   })
 })
+
+import dayjs from 'dayjs'
+import { getNextSession } from './program'
+import { treinoDani } from '@/data/treinoDani'
+
+describe('getNextSession', () => {
+  it('returns the next scheduled session after today even if today is a training day', () => {
+    // 2026-05-17 is a Sunday — pick a known Monday for determinism
+    const monday = dayjs('2026-05-18')
+    const result = getNextSession(monday, treinoDani.schedule)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.sessionId).toBeDefined()
+    expect(result.dayLabel).toBeTruthy()
+    expect(result.daysAhead).toBeGreaterThan(0)
+  })
+
+  it('handles rest day by returning the very next training day', () => {
+    // Find a rest day in the schedule
+    const restDay = dayjs('2026-05-17') // Sunday — typically rest
+    const result = getNextSession(restDay, treinoDani.schedule)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.daysAhead).toBeGreaterThanOrEqual(1)
+  })
+
+  it('returns null for empty schedule', () => {
+    expect(getNextSession(dayjs('2026-05-18'), [])).toBeNull()
+  })
+})
