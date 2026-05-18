@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import dayjs from 'dayjs'
-import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage, getLastWorkoutSummary, getTop3PRs } from './program'
+import { getWeekStates, getRecentPr, getNextSession, getStreak, getWeekTonnage, getLastWorkoutSummary, getTop3PRs, getLatestWeightTrend } from './program'
 import type { ExerciseLog } from '@/types'
 import { treinoDani } from '@/data/treinoDani'
 
@@ -292,5 +292,25 @@ describe('getLastWorkoutSummary', () => {
       completedSets: 2,
       topWeight: 60,
     })
+  })
+})
+
+describe('getLatestWeightTrend', () => {
+  it('returns null when no entries with weight', () => {
+    expect(getLatestWeightTrend([], dayjs('2026-05-17'))).toBeNull()
+    expect(getLatestWeightTrend([{ date: '2026-05-10' }], dayjs('2026-05-17'))).toBeNull()
+  })
+
+  it('returns latest weight and delta vs ~30 days ago', () => {
+    const today = dayjs('2026-05-17')
+    const entries = [
+      { date: '2026-05-17', weight: 72 },
+      { date: '2026-05-01', weight: 73 },
+      { date: '2026-04-18', weight: 75 },
+    ]
+    const result = getLatestWeightTrend(entries, today)
+    expect(result?.latest).toBe(72)
+    expect(result?.delta30d).toBe(-3) // vs 75
+    expect(result?.history.length).toBeGreaterThanOrEqual(1)
   })
 })

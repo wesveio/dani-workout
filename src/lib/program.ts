@@ -103,6 +103,36 @@ export const getRecentPr = (
   }
 }
 
+export type WeightTrend = {
+  latest: number
+  date: string
+  delta30d: number | null
+  history: number[]
+}
+
+export const getLatestWeightTrend = (
+  entries: Array<{ date: string; weight?: number }>,
+  today: dayjs.Dayjs,
+): WeightTrend | null => {
+  const withWeight = entries.filter((e): e is { date: string; weight: number } => typeof e.weight === 'number')
+  if (withWeight.length === 0) return null
+  const sorted = [...withWeight].sort((a, b) => a.date.localeCompare(b.date))
+  const latestEntry = sorted[sorted.length - 1]
+  const cutoff = today.subtract(30, 'day')
+  const window = sorted.filter((e) => !dayjs(e.date).isBefore(cutoff))
+  const baselineCandidates = sorted.filter((e) => dayjs(e.date).isBefore(cutoff))
+  const baseline = baselineCandidates.length > 0
+    ? baselineCandidates[baselineCandidates.length - 1]
+    : sorted[0]
+  const delta30d = baseline.date === latestEntry.date ? null : latestEntry.weight - baseline.weight
+  return {
+    latest: latestEntry.weight,
+    date: latestEntry.date,
+    delta30d,
+    history: window.map((e) => e.weight),
+  }
+}
+
 export type ComputedTarget = SetTarget & { targetSets: number }
 
 export const focusLabels: Record<Exercise['focus'], string> = {
